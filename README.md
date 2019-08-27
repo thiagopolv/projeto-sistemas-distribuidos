@@ -10,4 +10,6 @@ O **servidor** será responsável por iniciar um processo de leilão, definir o 
 
 O **cliente** deverá solicitar conexão com o servidor e, uma vez estabelecida a conexão, deverá escolher um nickname e enviar seus lances quando solicitado pelo servidor.  
 
+### Tecnologias Utilizadas:
 
+* Será escolhida a linguagem Java ou Javascript com NodeJS. 
