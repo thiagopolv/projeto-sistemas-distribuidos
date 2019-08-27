@@ -2,7 +2,7 @@
 
 O intuito desse projeto é aplicar conteúdos ensinados na disciplina de Sistemas Distribuídos.
 
-**Resumo do Projeto:** 
+### Resumo do Projeto:
 
 A ideia inicial deste projeto é desenvolver um sistema que simule leilões utilizando o modelo cliente-servidor.  
 
