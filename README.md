@@ -20,3 +20,4 @@ O **cliente** deverá solicitar conexão com o servidor e, uma vez estabelecida 
 
 * **Testes de funcionalidade:** Um cliente não pode ser capaz de enviar um lance cujo valor é menor que o lance corrente. Ele não deve ser capaz de escolher um *nickname* já escolhido por outro cliente. Deve ser permitido que ele envie apenas números como lance. Outras condições devem surgir no momento da implementação.
  
+* **Testes de funcionalidade:** Se um componente falhar e voltar a executar, ele não pode levar o sistema a nenhum estado inesperado. Por exemplo, um cliente não ser o dono de um lance que não realizou de fato.
