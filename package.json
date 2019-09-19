@@ -1,0 +1,11 @@
+{
+  "name": "auction-house",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/thiagopolv/projeto-sistemas-distribuidos",
+  "author": "Rodrigo Pereira <rodrigorpogo@gmail.com> e Thiago Pereira <thiagopolv@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
