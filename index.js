@@ -2,16 +2,11 @@ const fs = require('fs');
 const readFile = require('util').promisify(fs.readFile);
 const writeFile = require('util').promisify(fs.writeFile);
 const net = require('net')
+const DatabaseControl = require('./database_control')
 
+const databaseControl = new DatabaseControl().getInstance();
 
-async function bootstrap(name) {
-    const data = await readFile(__dirname + '/database/users.json');
-    const realData = JSON.parse(data.toString());
-    if (realData[name]) {
-        console.log(realData[name])
-    } else {
-        console.log("Manjou uma rola")
-    }
+async function bootstrap() {
+    console.log(await databaseControl.getBets())
 }
 
-bootstrap('thiago');
