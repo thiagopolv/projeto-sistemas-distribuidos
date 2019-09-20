@@ -1,0 +1,26 @@
+{
+  "23ipo312pio": {
+    "hash-bet_khj13kj2h112k3hj": {
+      "owner": "Rodrigo",
+      "value": 18.0
+    },
+    "hash-bet_dashjijashjkhas": {
+      "owner": "Thiago",
+      "value": 20.0
+    },
+    "initialValue": 15.0,
+    "owner": "Rodrigo"
+  },
+  "moto": {
+    "hash-bet_khj13kj2h112k3hj": {
+      "owner": "Rodrigo",
+      "value": 18.0
+    },
+    "hash-bet_dashjijashjkhas": {
+      "owner": "Thiago",
+      "value": 20.0
+    },
+    "initialValue": 15.0,
+    "owner": "Matheus"
+  }
+}

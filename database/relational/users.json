@@ -1,10 +1,10 @@
 {
-  "rodrigo": {
-    "username": "Rodrigo",
+  "username1": {
+    "name": "Rodrigo",
     "password": "asdasdasjdjasdhjsa"
   },
-  "thiago": {
-    "username": "Thiago",
+  "username2": {
+    "name": "Thiago",
     "password": "asdasdasjdjasdhjsa"
   }
 }
