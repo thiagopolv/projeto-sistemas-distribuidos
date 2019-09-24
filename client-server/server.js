@@ -31,12 +31,13 @@ function createAuctionServer() {
 
 function onConnectionEvent(server) {
     server.on('connection', (socket) => {
+        //validateNumberOfParticipantsStart(socket);
         clients.push(socket);
         console.log('Um novo participante se conectou ao leilão.');
         broadcast('Um novo participante se conectou ao leilão.');
         clientCount++;
-        validateNumberOfParticipants();
-    });
+        validateNumberOfParticipantsFinal(server);
+    });monitor
 }
 
 function broadcast(message) {
@@ -45,10 +46,19 @@ function broadcast(message) {
     })      
 }
 
-function validateNumberOfParticipants() {
+function validateNumberOfParticipantsStart(socket) {
+    if(clientCount >= minimumNumberOfParticipants) {
+        console.log('Não há mais vagas disponíveis nesse leilão.');
+        socket.destroy();
+    }
+}
+
+function validateNumberOfParticipantsFinal(server) {
     if(clientCount == minimumNumberOfParticipants) {
         console.log('Número mínimo de participantes atingido. Iniciando leilão...');
     }
+    broadcast('Número mínimo de participantes atingido. Iniciando leilão...');
+    server.close();
 }
 
 function testExample() {
