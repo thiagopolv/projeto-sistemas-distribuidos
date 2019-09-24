@@ -1,1 +1,10 @@
-{"9892398JASDASJK":{"username":"username1","time":"2019-09-19T02:06:15.665Z"},"890123jk":{"username":"username2","time":"2019-09-19T02:06:15.665Z"}}
+{
+  "rodrigo": {
+    "token": "46d8daf1-a69f-4a73-8eb6-1134d4ef84e7",
+    "date": "2019-09-24T16:51:10.277Z"
+  },
+  "thiago": {
+    "token": "50b41211-5855-41fd-998b-87fa5c607fbc",
+    "date": "2019-09-24T16:51:10.277Z"
+  }
+}
