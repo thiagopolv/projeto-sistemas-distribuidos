@@ -1,4 +1,5 @@
 const net = require('net');
+const messages = require('messages');
 
 const nickname = 'participant1';
 
@@ -11,6 +12,18 @@ function startConnection(client, serverPort, serverIP) {
     client.connect(serverPort, serverIP, (socket) => {
         console.log('Conectado com sucesso ao servidor.\n')
     })
+}
+
+function onDataEvent(socket) {
+    socket.on('data', function(data) {
+        if(data == messages.startingMessage) {
+            startBids();
+        }
+    });
+}
+
+function startBids() {
+    
 }
 
 function testExample() {

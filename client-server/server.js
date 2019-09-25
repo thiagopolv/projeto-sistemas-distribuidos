@@ -1,8 +1,6 @@
 const net = require('net');
 const createServer = require('util').promisify(net.createServer);
-
-let clientCount = 0;
-let clients = [];
+const messages = require('messages');
 
 const randomPort = 3000;
 const randomIP = 'localhost';
@@ -10,11 +8,11 @@ const startingBid = 10.00;
 const productName = 'Carro';
 const minimumNumberOfParticipants = 2;
 const auctionOwner = 'RandonOwner';
-const startingMessage = 'Número mínimo de participantes atingido. Iniciando leilão...';
-const connectedClientsMessage = 'Participantes conectados: {0}\n';
-const connectionMessage = 'Um novo participante se conectou ao leilão.\n' + connectedClientsMessage;
-const endMessage = 'O cliente encerrou a conexão';
-const errorMessage = 'Erro no servidor.';
+
+let clientCount = 0;
+let clients = [];
+let currentBid = startingBid;
+let lastBid = 0 ;
 
 connectionMessage.replace
 
@@ -30,6 +28,16 @@ function startAuction() {
     onConnectionEvent(server);
     onEndEvent(server);
     onErrorEvent(server);
+
+
+}
+
+function startBids() {
+    
+}
+
+function onDataEvent() {
+
 }
 
 function createAuctionServer() {
@@ -41,7 +49,7 @@ function createAuctionServer() {
 
 function socketOnErrorEvent(socket) {
     socket.on('error', function() {
-        console.log('Erro na conexão com o cliente.')
+        console.log(messages.clientConnectionError)
         clientCount--;
         clients.pop(socket);
     });
@@ -51,22 +59,21 @@ function onConnectionEvent(server) {
     server.on('connection', (socket) => {
         clients.push(socket);
         clientCount++;
-        console.log(connectionMessage.replace('{0}', clientCount));
-        broadcast(connectionMessage.replace('{0}', clientCount));        
+        console.log(messages.connectionMessage.replace('{0}', clientCount));
+        broadcast(messages.connectionMessage.replace('{0}', clientCount));        
         validateNumberOfParticipantsFinal();
     });
 }
 
 function onEndEvent(server) {
-    server.on('end', (socket) => {
-        console.log(socket.address);
-        console.log(endMessage);
+    server.on('end', (socket) => {        
+        console.log(messages.endMessage);
     });
 }
 
 function onErrorEvent(server) {
     server.on('error', () => {
-        console.log(errorMessage);
+        console.log(messages.errorMessage);
     });
 }
 
@@ -79,8 +86,8 @@ function broadcast(message) {
 function validateNumberOfParticipantsFinal() {
     console.log(`clientCount: ${clientCount}\n`)
     if(clientCount == minimumNumberOfParticipants) {
-        console.log(startingMessage);
-        broadcast(startingMessage);
+        console.log(messages.startingMessage);
+        broadcast(messages.startingMessage);
     }    
 }
 
