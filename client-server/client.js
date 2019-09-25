@@ -2,8 +2,6 @@ const net = require('net');
 
 const nickname = 'participant1';
 
-
-
 function createSocket() {
     const client = new net.Socket();
     return client;
@@ -11,7 +9,7 @@ function createSocket() {
 
 function startConnection(client, serverPort, serverIP) {
     client.connect(serverPort, serverIP, (socket) => {
-        console.log('Connected')
+        console.log('Conectado com sucesso ao servidor.\n')
     })
 }
 
@@ -20,14 +18,22 @@ function testExample() {
     startConnection(client, 3000, 'localhost');
 
     client.on('data', function (data) {
-        console.log('Received: ' + data);
+        console.log('Recebido: ' + data);
         client.write('Hello, server! Good bye!')
         //client.destroy(); // kill client after server's response
     })
 
     client.on('close', function () {
-        console.log('Connection closed');
+        console.log('Conexão encerrada.');
     });
+
+    client.on('error', function () {
+        console.log('Erro no servidor.')
+    })
+
+    client.on('end', function () {
+        console.log('Recebido: O servidor encerrou a conexão.')
+    })
 }
 
 testExample();
