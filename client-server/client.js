@@ -5,6 +5,7 @@ const readline = require('readline');
 const nickname = 'participant1';
 const randomPort = 3000;
 const randomIP = 'localhost';
+const input = createInterface();
 
 let auctionState = 'STARTING';
 
@@ -33,7 +34,7 @@ function onDataEvent(socket) {
 }
 
 function sendBid(socket) {    
-    let input = createInterface();
+    input.close();
     input.question('Insira o seu lance: ', (bid) => {
         socket.write(bid);
         input.close();
