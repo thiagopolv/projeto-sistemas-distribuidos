@@ -16,13 +16,35 @@ function createSocket() {
 
 function startConnection(client, serverPort, serverIP) {
     client.connect(serverPort, serverIP, (socket) => {
-        console.log('Conectado com sucesso ao servidor.\n')
+        console.log('\nConectado com sucesso ao servidor.\n')
     });
+}
+
+function sendBid(socket) {    
+    input.question('\nInsira o seu lance: ', (bid) => {
+        socket.write(bid);
+    });    
+}
+
+function connectToAuction() {
+    let client = createSocket();
+    startConnection(client, randomPort, randomIP);
+    onDataEvent(client);
+    onErrorEvent(client);
+    onEndEvent(client);
+    onCloseEvent(client);
+}
+
+function createInterface() {
+    return readline.createInterface({
+        input: process.stdin,
+        output: process.stdout 
+     });
 }
 
 function onDataEvent(socket) {
     socket.on('data', function(data) { 
-        console.log(`Recebido: ${data}\n`);
+        console.log(`\nRecebido: ${data}\n`);
         if(data == messages.startingMessage) {       
             auctionState = 'STARTED';    
         }
@@ -33,38 +55,27 @@ function onDataEvent(socket) {
     });
 }
 
-function sendBid(socket) {    
-    input.close();
-    input.question('Insira o seu lance: ', (bid) => {
-        socket.write(bid);
-        input.close();
-    });    
+function onCloseEvent(socket) {
+    socket.on('close', function () {
+        console.log('\nConexão encerrada.');
+        socket.destroy();
+        process.exit(1);
+    });
+}
+
+function onEndEvent(socket) {
+    socket.on('end', function () {
+        console.log('\nO servidor encerrou a conexão.')
+        socket.destroy();
+        process.exit(1);
+    });
 }
 
 function onErrorEvent(socket) {
     socket.on('error', function () {
-        console.log('Erro no servidor.')
+        console.log('\nErro no servidor.')
+        process.exit(1);
     });
-}
-
-function onCloseEvent(socket) {
-    socket.on('end', function () {
-        console.log('O servidor encerrou a conexão.')
-    });
-}
-
-function connectToAuction() {
-    let client = createSocket();
-    startConnection(client, randomPort, randomIP);
-    onDataEvent(client);
-    onErrorEvent(client);
-}
-
-function createInterface() {
-    return readline.createInterface({
-        input: process.stdin,
-        output: process.stdout 
-     });
 }
 
 function testExample() {

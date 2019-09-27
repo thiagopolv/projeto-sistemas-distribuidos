@@ -32,28 +32,31 @@ function startAuction() {
 function startBids() {
 }
 
-function socketOnDataEvent(socket) {
-    socket.on('data', function(data) {
-        lastBid = currentBid;
-        currentBid = data;
+function socketOnDataEvent(socket, server) {
+    socket.on('data', function(data) {        
         console.log('Lance: ' + data);
         broadcast(`Foi enviado um lance de ${data}.\nAguardando novo lance.\n\n`);
+        currentBid = data;
         setTimeout(() => {
+            lastBid = data;
             console.log('actual: ' + currentBid);
             console.log('last:' + lastBid);
             if(currentBid == lastBid) {
                 broadcast(`\n\nLeilão finalizado! O lance vencedor foi de R${data}.\n`);
+                closeSocketsAndServer(server);
             }
         }, 10000)
     });
 }
 
 function createAuctionServer() {
-    return server = net.createServer((socket) => {
+    let server = net.createServer((socket) => {
         socket.setDefaultEncoding('utf-8');
         socketOnErrorEvent(socket);
-        socketOnDataEvent(socket);
-    });    
+        socketOnDataEvent(socket, server);
+    });
+
+    return server;
 }
 
 function socketOnErrorEvent(socket) {
@@ -99,7 +102,14 @@ function onErrorEvent(server) {
 function broadcast(message) {
     clients.forEach(function(client) {
         client.write(message);
-    })      
+    });
+}
+
+function closeSocketsAndServer(server) {
+    clients.forEach(function(client) {
+        client.destroy();
+    });
+    server.close();
 }
 
 function validateNumberOfParticipants() {
