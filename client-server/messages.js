@@ -1,4 +1,4 @@
-const startingMessage = 'Número mínimo de participantes atingido. Leilão iniciado!';
+const startingMessage = '\nNúmero mínimo de participantes atingido. Leilão iniciado!';
 const connectedClientsMessage = 'Participantes conectados: {0}\n';
 const connectionMessage = 'Um novo participante se conectou ao leilão.\n' + connectedClientsMessage;
 const endMessage = 'O cliente encerrou a conexão';

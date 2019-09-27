@@ -1,6 +1,6 @@
 const net = require('net');
 const createServer = require('util').promisify(net.createServer);
-const messages = require('messages');
+const messages = require('./messages');
 
 const randomPort = 3000;
 const randomIP = 'localhost';
@@ -13,8 +13,7 @@ let clientCount = 0;
 let clients = [];
 let currentBid = startingBid;
 let lastBid = 0 ;
-
-connectionMessage.replace
+let auctionState = 'STARTING';
 
 function startAuction() {
     const server = createAuctionServer();
@@ -28,22 +27,32 @@ function startAuction() {
     onConnectionEvent(server);
     onEndEvent(server);
     onErrorEvent(server);
-
-
 }
 
 function startBids() {
-    
 }
 
-function onDataEvent() {
-
+function socketOnDataEvent(socket) {
+    socket.on('data', function(data) {
+        lastBid = currentBid;
+        currentBid = data;
+        console.log('Lance: ' + data);
+        broadcast(`Foi enviado um lance de ${data}.\nAguardando novo lance.\n\n`);
+        setTimeout(() => {
+            console.log('actual: ' + currentBid);
+            console.log('last:' + lastBid);
+            if(currentBid == lastBid) {
+                broadcast(`\n\nLeilão finalizado! O lance vencedor foi de R${data}.\n`);
+            }
+        }, 10000)
+    });
 }
 
 function createAuctionServer() {
     return server = net.createServer((socket) => {
         socket.setDefaultEncoding('utf-8');
         socketOnErrorEvent(socket);
+        socketOnDataEvent(socket);
     });    
 }
 
@@ -57,11 +66,21 @@ function socketOnErrorEvent(socket) {
 
 function onConnectionEvent(server) {
     server.on('connection', (socket) => {
-        clients.push(socket);
         clientCount++;
+        console.log(auctionState);
         console.log(messages.connectionMessage.replace('{0}', clientCount));
-        broadcast(messages.connectionMessage.replace('{0}', clientCount));        
-        validateNumberOfParticipantsFinal();
+        console.log(clients.length);
+        broadcast(messages.connectionMessage.replace('{0}', clientCount));
+
+        clients.push(socket);
+        
+        if(auctionState == 'STARTED') {
+            socket.write(messages.startingMessage);
+        }   
+
+        if(auctionState == 'STARTING') {
+            validateNumberOfParticipants();
+        }    
     });
 }
 
@@ -83,11 +102,11 @@ function broadcast(message) {
     })      
 }
 
-function validateNumberOfParticipantsFinal() {
-    console.log(`clientCount: ${clientCount}\n`)
+function validateNumberOfParticipants() {
     if(clientCount == minimumNumberOfParticipants) {
         console.log(messages.startingMessage);
         broadcast(messages.startingMessage);
+        auctionState = 'STARTED';
     }    
 }
 

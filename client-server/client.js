@@ -1,7 +1,12 @@
 const net = require('net');
-const messages = require('messages');
+const messages = require('./messages');
+const readline = require('readline');
 
 const nickname = 'participant1';
+const randomPort = 3000;
+const randomIP = 'localhost';
+
+let auctionState = 'STARTING';
 
 function createSocket() {
     const client = new net.Socket();
@@ -11,28 +16,62 @@ function createSocket() {
 function startConnection(client, serverPort, serverIP) {
     client.connect(serverPort, serverIP, (socket) => {
         console.log('Conectado com sucesso ao servidor.\n')
-    })
+    });
 }
 
 function onDataEvent(socket) {
-    socket.on('data', function(data) {
-        if(data == messages.startingMessage) {
-            startBids();
+    socket.on('data', function(data) { 
+        console.log(`Recebido: ${data}\n`);
+        if(data == messages.startingMessage) {       
+            auctionState = 'STARTED';    
+        }
+
+        if(auctionState == 'STARTED') {
+            sendBid(socket);
         }
     });
 }
 
-function startBids() {
-    
+function sendBid(socket) {    
+    let input = createInterface();
+    input.question('Insira o seu lance: ', (bid) => {
+        socket.write(bid);
+        input.close();
+    });    
+}
+
+function onErrorEvent(socket) {
+    socket.on('error', function () {
+        console.log('Erro no servidor.')
+    });
+}
+
+function onCloseEvent(socket) {
+    socket.on('end', function () {
+        console.log('O servidor encerrou a conexão.')
+    });
+}
+
+function connectToAuction() {
+    let client = createSocket();
+    startConnection(client, randomPort, randomIP);
+    onDataEvent(client);
+    onErrorEvent(client);
+}
+
+function createInterface() {
+    return readline.createInterface({
+        input: process.stdin,
+        output: process.stdout 
+     });
 }
 
 function testExample() {
     let client = createSocket();
     startConnection(client, 3000, 'localhost');
 
-    client.on('data', function (data) {
+    client.on('data', function (data) {              
         console.log('Recebido: ' + data);
-        client.write('Hello, server! Good bye!')
         //client.destroy(); // kill client after server's response
     })
 
@@ -49,4 +88,5 @@ function testExample() {
     })
 }
 
-testExample();
+// testExample();
+connectToAuction();
