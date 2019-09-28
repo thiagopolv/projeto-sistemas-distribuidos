@@ -29,24 +29,42 @@ function startAuction() {
     onErrorEvent(server);
 }
 
-function startBids() {
+function socketOnDataEvent(socket, server) {
+    socket.on('data', function(data) { 
+        let regex = /^\d+(\.\d{1,2})?$/;
+        if(regex.test(data)) {
+            console.log('\nNovo Lance: R$' + data);
+            multicast(messages.sentBidMessage.replace('{}', data));
+            let isLessThanCurrentBid = verifyIfReceivedBidIsLessThanCurrentBid(data, socket);
+            verifyIfAuctionIsFinished(data, server, isLessThanCurrentBid);
+        } else {
+            console.log(`Lance ${data} recebido possui formato inválido.`);
+            socket.write(messages.sentBidFormatErrorMessage);
+        }        
+    });
 }
 
-function socketOnDataEvent(socket, server) {
-    socket.on('data', function(data) {        
-        console.log('Lance: ' + data);
-        broadcast(`Foi enviado um lance de ${data}.\nAguardando novo lance.\n\n`);
-        currentBid = data;
-        setTimeout(() => {
-            lastBid = data;
-            console.log('actual: ' + currentBid);
-            console.log('last:' + lastBid);
-            if(currentBid == lastBid) {
-                broadcast(`\n\nLeilão finalizado! O lance vencedor foi de R${data}.\n`);
-                closeSocketsAndServer(server);
-            }
-        }, 10000)
-    });
+function verifyIfReceivedBidIsLessThanCurrentBid(data, socket) {
+    let dataLessThanCurrentBid = false;    
+    if(data <= currentBid) {
+        console.log(messages.receivedBidErrorMessage.replace('{}', data));
+        socket.write(messages.sentBidErrorMessage);
+        dataLessThanCurrentBid= true;
+    }
+    currentBid = data;
+    return dataLessThanCurrentBid;
+}
+
+function verifyIfAuctionIsFinished(data, server, isLessThanCurrentBid) {
+    setTimeout(() => {
+        lastBid = data;
+        console.log('actual: ' + currentBid);
+        console.log('last:' + lastBid);
+        if(currentBid == lastBid && !isLessThanCurrentBid) {
+            multicast(messages.finishedAuctionMessage.replace('{}', data));
+            closeSocketsAndServer(server);
+        }
+    }, 20000)
 }
 
 function createAuctionServer() {
@@ -73,7 +91,7 @@ function onConnectionEvent(server) {
         console.log(auctionState);
         console.log(messages.connectionMessage.replace('{0}', clientCount));
         console.log(clients.length);
-        broadcast(messages.connectionMessage.replace('{0}', clientCount));
+        multicast(messages.connectionMessage.replace('{0}', clientCount));
 
         clients.push(socket);
         
@@ -99,7 +117,7 @@ function onErrorEvent(server) {
     });
 }
 
-function broadcast(message) {
+function multicast(message) {
     clients.forEach(function(client) {
         client.write(message);
     });
@@ -115,7 +133,7 @@ function closeSocketsAndServer(server) {
 function validateNumberOfParticipants() {
     if(clientCount == minimumNumberOfParticipants) {
         console.log(messages.startingMessage);
-        broadcast(messages.startingMessage);
+        multicast(messages.startingMessage);
         auctionState = 'STARTED';
     }    
 }

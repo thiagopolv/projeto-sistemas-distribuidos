@@ -44,9 +44,13 @@ function createInterface() {
 
 function onDataEvent(socket) {
     socket.on('data', function(data) { 
-        console.log(`\nRecebido: ${data}\n`);
+        console.log(`\nRecebido: ${data}`);
         if(data == messages.startingMessage) {       
-            auctionState = 'STARTED';    
+            auctionState = 'STARTED';
+        }
+
+        if(data == messages.sentBidErrorMessage) {
+            console.log(messages.sentBidErrorMessage);
         }
 
         if(auctionState == 'STARTED') {
