@@ -1,15 +1,30 @@
 {
-  "auction1": {
-    "bets": [],
+  "ffe10ff3-cd15-42b8-8004-cd705d8d00a7": {
+    "name": "auction1",
     "initialValue": 15,
-    "finalValue": 25,
-    "winner": "Thiago",
-    "owner": "Rodrigo"
+    "currentValue": 25,
+    "owner": "username",
+    "status": "FINISHED",
+    "winnerBet": "d4720e11-e366-41f0-839c-c67b5dc89aed",
+    "startedDate": "2019-09-29T17:12:49.246Z",
+    "endDate": "2019-09-29T18:12:49.246Z"
   },
-  "moto": {
-    "hash-bet_khj13kj2h112k3hj": { "owner": "Rodrigo", "value": 18 },
-    "hash-bet_dashjijashjkhas": { "owner": "Thiago", "value": 20 },
+  "7486b0fb-a961-49c2-aabb-a578c32b133d": {
+    "name": "moto",
     "initialValue": 15,
-    "owner": "Matheus"
+    "currentValue": 16,
+    "owner": "username",
+    "status": "GOING_ON",
+    "startedDate": "2019-09-29T17:12:49.246Z",
+    "endDate": "2019-09-29T18:12:49.246Z"
+  },
+  "4b04c020-85c8-429e-a216-a86c5f523503": {
+    "name": "carro",
+    "initialValue": 15,
+    "currentValue": 15,
+    "owner": "username",
+    "status": "WAITING_PLAYERS",
+    "startedDate": "2019-09-29T17:12:49.246Z",
+    "endDate": "2019-09-29T18:12:49.246Z"
   }
 }
