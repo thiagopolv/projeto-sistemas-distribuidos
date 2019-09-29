@@ -1,15 +1,20 @@
-const startingMessage = '\nNúmero mínimo de participantes atingido. Leilão iniciado!';
-const connectedClientsMessage = '\nParticipantes conectados: {0}';
-const connectionMessage = '\nUm novo participante se conectou ao leilão.' + connectedClientsMessage;
-const endMessage = '\nO cliente encerrou a conexão';
-const errorMessage = '\nErro no servidor.';
-const clientConnectionError = '\nErro na conexão com o cliente.';
-const sentBidMessage = 'Foi enviado um lance de {}.\nAguardando novo lance.\n\n';
-const finishedAuctionMessage = '\n\nLeilão finalizado! O lance vencedor foi de R${}.\n';
-const receivedBidErrorMessage = '\nO lance de R${} recebido é menor que o lance corrente.'
-const sentBidErrorMessage = '\nO lance enviado é menor que o lance corrente.'
-const sentBidFormatErrorMessage = '\nO valor enviado no lance deve ser numérico e possuir no máximo duas casas decimais.';
-
-module.exports = {startingMessage, connectedClientsMessage, connectionMessage, endMessage, errorMessage, 
-    clientConnectionError, sentBidMessage, finishedAuctionMessage, receivedBidErrorMessage, sentBidErrorMessage,
-    sentBidFormatErrorMessage};
+module.exports = message = {
+    startingMessage: '\nNúmero mínimo de participantes atingido. Leilão iniciado!',
+    connectedClientsMessage: '\nParticipantes conectados: {0}',
+    connectionMessage: '\nUm novo participante se conectou ao leilão.' + this.connectedClientsMessage,
+    endMessage: '\nO cliente encerrou a conexão',
+    errorMessage: '\nErro no servidor.',
+    clientConnectionError: '\nErro na conexão com o cliente.',
+    sentBidMessage: 'Foi enviado um lance de {}.\nAguardando novo lance.\n\n',
+    finishedAuctionMessage: '\n\nLeilão finalizado! O lance vencedor foi de R${}.\n',
+    receivedBidErrorMessage: '\nO lance de R${} recebido é menor que o lance corrente.',
+    sentBidErrorMessage: '\nO lance enviado é menor que o lance corrente.',
+    sentBidFormatErrorMessage: '\nO valor enviado no lance deve ser numérico e possuir no máximo duas casas decimais.',
+    successAuthenticationMessage: '\nUsúario autenticado com sucesso.',
+    successCreatingUser: '\nUsúario criado com sucesso.',
+    errorCreatingUser: '\nUsúario já existente',
+    errorAuthenticationMessage: '\nOcorreu um erro na autenticação.',
+    expireSessionMessage: '\nA sessão expirou',
+    getUserMessage: '\nInsira seu usuário: ',
+    getPasswordMessage: '\nInsira sua senha: ',
+};
