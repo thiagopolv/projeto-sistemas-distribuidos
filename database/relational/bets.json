@@ -1,1 +1,8 @@
-{"poi3p2o1i":{"name":"Carro","owner":"Rodrigo","value":25,"lastHashBet":"","lastBetDate":"2019-19-9Z23:00"},"kdaskjsh2":{"name":"Carro","owner":"Rodrigo","value":25,"lastHashBet":"","lastBetDate":"2019-19-9Z23:00"}}
+{
+  "d4720e11-e366-41f0-839c-c67b5dc89aed": {
+    "owner": "rpolnx",
+    "value": 25,
+    "betDate": "2019-09-29T17:12:49.246Z",
+    "auction": "ffe10ff3-cd15-42b8-8004-cd705d8d00a7"
+  }
+}

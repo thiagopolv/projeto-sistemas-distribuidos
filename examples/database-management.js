@@ -1,10 +1,10 @@
 const BetRepository = require('../model/repository/BetRepository');
-const Auction = require('../model/repository/Auction');
+const AuctionRepository = require('../model/repository/AuctionRepository');
 const SessionRepository = require('../model/repository/SessionRepository');
 const UserRepository = require('../model/repository/UserRepository');
 
 const betRepository = new BetRepository().getInstance();
-const auctionRepository = new Auction().getInstance();
+const auctionRepository = new AuctionRepository().getInstance();
 const sessionRepository = new SessionRepository().getInstance();
 const userRepository = new UserRepository().getInstance();
 
