@@ -14,15 +14,26 @@ module.exports = actions = {
         type: {
             get: 'GET_AUCTION',
             create: 'CREATE_AUCTION',
+            successCreate: "SUCCESS_CREATE_AUCTION",
             associate: 'AUCTION_ASSOCIATE',
+            associateSuccess: 'AUCTION_ASSOCIATE_SUCCESS',
+            associateError: 'AUCTION_ASSOCIATE_ERROR',
             new: "NEW_AUCTION"
         }
     },
     notification: {
         name: 'NOTIFICATION',
         type: {
-            newUser: 'NEW_USER_JOINNED',
-            newAuctionsAvailable: 'NEW_AUCTIONS_AVAILABLE',
+            newUser: 'NEW_USER_JOINNED'
+        }
+    },
+    bid: {
+        name: 'BID',
+        type: {
+            new: 'NEW_BID',
+            update: 'UPDATED_BID',
+            error: 'ERROR_BID',
+            success: "SUCESS_NEW_BID"
         }
     }
 };
