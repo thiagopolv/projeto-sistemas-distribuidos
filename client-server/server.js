@@ -6,29 +6,20 @@ const AuctionService = require('../service/AuctionService');
 
 const userService = new UserService();
 const auctionService = new AuctionService();
-const randomPort = 3000;
-const randomIP = 'localhost';
-const startingBid = 10.00;
-const productName = 'Carro';
-const minimumNumberOfParticipants = 2;
-const auctionOwner = 'RandonOwner';
 
-let clientWaitingAuthCount = 0;
+const serverPort = 3000;
+const serverIp = '';
 let clientsSocketListWaitingAuth = [];
-
-let clientCount = 0;
 let clientsSocketList = [];
-let currentBid = startingBid;
-let lastBid = 0;
-let auctionState = 'STARTING';
+let auctionsSocketList = {};
+
+const minimumNumberOfParticipants = 2;
 
 function startAuction() {
-    const server = createAuctionServer();
+    const server = createServer();
 
-    server.listen(randomPort, randomIP, () => {
-        console.log(`Iniciando o leilão do ${productName} de ${auctionOwner}.`);
-        console.log(`São necessários ${minimumNumberOfParticipants} participantes para começar.`);
-        console.log(`O lance inicial é de R$${startingBid} \n`);
+    server.listen(serverPort, serverIp, () => {
+        console.log(`O servidor iniciou na porta ${serverPort}`);
     });
 
     onConnectionEvent(server);
@@ -37,23 +28,54 @@ function startAuction() {
 }
 
 function socketOnDataEvent(socket) {
-    socket.on('data', function (data) {
-        processData(socket, JSON.parse(data));
+    socket.on('data', function (fullData) {
+        processData(socket, JSON.parse(fullData));
     });
 }
 
-function processData(socket, data) {
+function processData(socket, fullData) {
     // clearConsole();
-    switch (data.action) {
+    // console.log(fullData)
+    switch (fullData.action) {
         case 'AUTH':
-            processAuthenticationAction(socket, data);
+            processAuthenticationAction(socket, fullData);
             break;
         case 'AUCTION':
-            processAuctionAction(socket, data);
+            processAuctionAction(socket, fullData);
             break;
         case 'BID':
+            processBidAction(socket, fullData);
             break;
     }
+}
+
+async function processBidAction(socket, fullData) {
+    const newSession = await getAuthentication(fullData.token);
+    if (!newSession) {
+        const obj = buildDataToSend({ message: messages.expireSessionMessage }, actions.auth.name, actions.auth.type.expire, null);
+        sendData(socket, obj);
+        return;
+    }
+    switch (fullData.type) {
+        case 'NEW_BID':
+            processNewBidAction(socket, fullData, newSession);
+            break;
+    }
+}
+
+async function processNewBidAction(socket, fullData, newSession) {
+    const bidAnswer = await auctionService.newBid(newSession, fullData.data);
+    if (bidAnswer.error) {
+        sendData(socket, {
+            data: { auction: fullData.data.auction, message: bidAnswer.message }, token: newSession.token, action: actions.bid.name,
+            type: actions.bid.type.error
+        });
+        return;
+    }
+
+    sendData(socket, { data: { auction: bidAnswer.auction }, token: newSession.token, action: actions.bid.name, type: actions.bid.type.success });
+    multicast({ data: { auction: bidAnswer.auction }, action: actions.bid.name, type: actions.bid.type.update },
+        auctionsSocketList[bidAnswer.auction.id]);
 }
 
 function processAuthenticationAction(socket, fullData) {
@@ -94,10 +116,8 @@ async function processUserCreation(socket, fullData) {
 
 
 function migrateToClientsList(socket) {
-    clientWaitingAuthCount--;
     clientsSocketListWaitingAuth.splice(clientsSocketListWaitingAuth.indexOf(socket), 1);
     clientsSocketList.push(socket);
-    clientCount++;
 }
 
 function buildDataToSend(content, action, type, token) {
@@ -111,68 +131,72 @@ function sendData(socket, data) {
     socket.write(JSON.stringify(data));
 }
 
-function processAuctionAction(socket, fullData) {
-    const newSession = getAuthentication(fullData.token);
+async function processAuctionAction(socket, fullData) {
+    const newSession = await getAuthentication(fullData.token);
     if (!newSession) {
         const obj = buildDataToSend({ message: messages.expireSessionMessage }, actions.auth.name, actions.auth.type.expire, null);
         sendData(socket, obj);
         return;
     }
+    addSocketIfNotOnList(socket);
 
     switch (fullData.type) {
         case 'GET_AUCTION':
             getAuctions(socket, newSession);
             break;
         case 'CREATE_AUCTION':
-            createAuction(newSession, fullData);
+            createAuction(socket, newSession, fullData);
             break;
         case 'AUCTION_ASSOCIATE':
+            associateSocketOnAuction(newSession, fullData, socket);
             break;
     }
 }
 
-function getAuthentication(token) {
-    return userService.verifySession(token);
+async function getAuthentication(token) {
+    return await userService.verifySession(token);
+}
+
+function addSocketIfNotOnList(socket) {
+    if (socketIsNotOnList(socket)) {
+        clientsSocketList.push(socket);
+    }
+}
+
+function socketIsNotOnList(socket) {
+    return clientsSocketList.some(storagedSocket => JSON.stringify(storagedSocket) !== JSON.stringify(socket));
 }
 
 async function getAuctions(socket, newSession) {
-    console.log('cheguei em get auctions')
     auctions = await auctionService.getAuctions();
     sendData(socket, { data: auctions, token: newSession.token, action: actions.auction.name, type: actions.auction.type.get });
 }
 
-async function createAuction(newSession, fullData) {
+async function createAuction(socket, newSession, fullData) {
+    console.log(newSession, fullData)
     auctions = await auctionService.createAuction(newSession, fullData.data);
-    multicast({ data: auctions, action: actions.auction.name, type: actions.auction.type.new });
+    sendData(socket, { token: newSession.token, action: actions.auction.name, type: actions.auction.type.successCreate });
+    multicast({ data: auctions, action: actions.auction.name, type: actions.auction.type.new }, clientsSocketList);
 }
 
-function onClientConnected() {
-    console.log(auctionState);
-    console.log(messages.connectionMessage.replace('{0}', clientCount));
-    console.log(clientsSocketList.length);
-    multicast(messages.connectionMessage.replace('{0}', clientCount));
-    clientCount++;
-    clientsSocketList.push(socket);
+async function associateSocketOnAuction(newSession, fullData, socket) {
+    auctionsSocketList[fullData.data.id] = auctionsSocketList[fullData.data.id] || []
 
-    if (auctionState == 'STARTED') {
-        socket.write(messages.startingMessage);
+    const auctionVerify = await auctionService.verifyAuction(fullData.data.id, auctionsSocketList[fullData.data.id].length, minimumNumberOfParticipants);
+    if (!fullData.data.id || !auctionVerify) {
+        sendData(socket, {
+            data: fullData.data, token: newSession.token, message: "Erro ao associar ao leilão\n", action: actions.auction.name,
+            type: actions.auction.type.associateError
+        });
         return;
     }
 
-    validateNumberOfParticipants();
-}
-
-function vaidateNewBid() {
-    const regex = /^\d+(\.\d{1,2})?$/;
-    if (regex.test(data)) {
-        console.log('\nNovo Lance: R$' + data);
-        multicast(messages.sentBidMessage.replace('{}', data));
-        const isLessThanCurrentBid = verifyIfReceivedBidIsLessThanCurrentBid(data, socket);
-        verifyIfAuctionIsFinished(data, server, isLessThanCurrentBid);
-    } else {
-        console.log(`Lance ${data} recebido possui formato inválido.`);
-        socket.write(messages.sentBidFormatErrorMessage);
-    }
+    auctionsSocketList[fullData.data.id].push(socket);
+    sendData(socket, { data: fullData.data, token: newSession.token, action: actions.auction.name, type: actions.auction.type.associateSuccess });
+    multicast({
+        data: { user: newSession.user, auction: fullData.data }, action: actions.notification.name,
+        type: actions.notification.type.newUser
+    }, auctionsSocketList[fullData.data.id]);
 }
 
 function clearConsole() {
@@ -202,7 +226,7 @@ function verifyIfAuctionIsFinished(data, server, isLessThanCurrentBid) {
     }, 20000)
 }
 
-function createAuctionServer() {
+function createServer() {
     const server = net.createServer((socket) => {
         socket.setDefaultEncoding('utf-8');
         socketOnErrorEvent(socket);
@@ -215,29 +239,24 @@ function createAuctionServer() {
 function socketOnErrorEvent(socket) {
     socket.on('error', function (err) {
         console.log(err)
-        console.log(clientsSocketList)
-        
-        clientsSocketListWaitingAuth = clientsSocketListWaitingAuth.filter((storagedSocket) => {
-            if (JSON.stringify(storagedSocket) === JSON.stringify(socket)) {
-                clientWaitingAuthCount--;
-                return false;
-            }
-            return true;
+
+        clientsSocketListWaitingAuth = removeSocketIfIsInList(clientsSocketListWaitingAuth, socket);
+        clientsSocketList = removeSocketIfIsInList(clientsSocketList, socket);
+        Object.keys(auctionsSocketList).forEach((auctionHash) => {
+            auctionsSocketList[auctionHash] = removeSocketIfIsInList(auctionsSocketList[auctionHash]);
         })
-        clientsSocketList = clientsSocketList.filter((storagedSocket) => {
-            if (JSON.stringify(storagedSocket) === JSON.stringify(socket)) {
-                clientCount--;
-                return false;
-            }
-            return true;
-        })
-        console.log(clientsSocketList)
+
     });
 }
 
-function onConnectionEvent(server) {
+function removeSocketIfIsInList(socketList, socket) {
+    return socketList.filter((storagedSocket) => {
+        return JSON.stringify(storagedSocket) !== JSON.stringify(socket)
+    })
+}
+
+function onConnectionEvent(server, ) {
     server.on('connection', (socket) => {
-        clientWaitingAuthCount++;
         clientsSocketListWaitingAuth.push(socket);
     });
 }
@@ -256,25 +275,10 @@ function onErrorEvent(server) {
     });
 }
 
-function multicast(message) {
-    clientsSocketList.forEach(function (client) {
-        client.write(message);
+function multicast(message, socketList) {
+    socketList.forEach(function (client) {
+        client.write(JSON.stringify(message));
     });
-}
-
-function closeSocketsAndServer(server) {
-    clientsSocketList.forEach(function (client) {
-        client.destroy();
-    });
-    server.close();
-}
-
-function validateNumberOfParticipants() {
-    if (clientCount == minimumNumberOfParticipants) {
-        console.log(messages.startingMessage);
-        multicast(messages.startingMessage);
-        auctionState = 'STARTED';
-    }
 }
 
 startAuction();
