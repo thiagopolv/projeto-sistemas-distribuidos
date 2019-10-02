@@ -42,8 +42,9 @@ class UserService {
     }
 
     _validadeSessionExpiration(date) {
-        const lastAceptableDate = Date.now() - 1000 * 60 * 20; // 20 minutes
-        return new Date(date) - new Date(Date.now() - lastAceptableDate) > 0;
+        const dateNowInCorrectZone = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+        const lastAceptableDate = dateNowInCorrectZone - 1000 * 60 * 20; // 20 minutes
+        return new Date(date) - new Date(lastAceptableDate) > 0;
     }
 
     async _renovateSession(user) {
@@ -66,7 +67,6 @@ class UserService {
                     user: users[data.user],
                     token: session.token
                 };
-
             }
             return null;
         } catch (ex) {
@@ -90,7 +90,7 @@ class UserService {
     _factorySessionObject(username) {
         return {
             token: generateToken(32),
-            date: new Date(),
+            date: new Date(Date.now() - new Date().getTimezoneOffset() * 60000),
             user: username
         }
     }
