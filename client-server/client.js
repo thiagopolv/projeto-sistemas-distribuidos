@@ -8,10 +8,9 @@ const inputQuestion = promisifyInputQuestion();
 const negativeAnswers = ['no', 'n', 'nao', 'não'];
 const randomPort = 3000;
 const randomIP = 'localhost';
-let auctionState = 'STARTING';
 
 let blockRender = false;
-let auctions = [];
+let auctions = {};
 let sessionAuction;
 let sessionToken;
 let clientSocket;
@@ -31,27 +30,35 @@ function createSocket() {
 }
 
 function startConnection(serverPort, serverIP) {
-    clientSocket.connect(serverPort, serverIP, async () => {
+    clientSocket.connect(serverPort, serverIP, () => {
         clearConsole();
         console.log('Conectado com sucesso ao servidor.\n')
-        if (sessionToken && sessionAuction) {
-            // const option = await inputQuestion('\n 0: CRIAR ou 1: BUSCAR um leilão? ');
-            // if (option === 0 || option === 'CRIAR') {
-            //     return createAuction(client, sessionToken);
-            // } else {
-            //     return getAvailableAuctions(client, sessionToken);
-            // }
-        }
-        if (sessionToken) {
-            const option = await inputQuestion('\n 0: CRIAR ou 1: BUSCAR um leilão? ');
-            if (option === 0 || option === 'CRIAR') {
-                return createAuction(sessionToken);
-            } else {
-                return getAvailableAuctions(sessionToken);
-            }
-        }
-        authenticationProcess();
+        goToProgramMainState();
     });
+}
+
+async function goToProgramMainState(dontClearConsole) {
+    if (!dontClearConsole) {
+        clearConsole();
+    }
+
+
+    if (sessionToken && sessionAuction) {
+        // const option = await inputQuestion('\n 0: CRIAR ou 1: BUSCAR um leilão? ');
+        renderSingleAuction(sessionAuction);
+        return;
+    }
+    if (sessionToken) {
+        blockRender = true;
+        const option = await inputQuestion('\nCRIAR ou BUSCAR um leilão? ');
+        blockRender = false;
+        if (option === 'CRIAR') {
+            return createAuction();
+        } else {
+            return getAvailableAuctions();
+        }
+    }
+    authenticationProcess();
 }
 
 async function authenticationProcess() {
@@ -94,16 +101,16 @@ function sendMessageToServer(socket, data) {
     socket.write(JSON.stringify(data))
 }
 
-function processAuthenticationAction(data) {
-    switch (data.type) {
+function processAuthenticationAction(fullData) {
+    switch (fullData.type) {
         case 'AUTH_SUCCESS':
-            console.log(data.data.message)
-            sessionToken = data.token;
-            getAvailableAuctions();
+            console.log(fullData.data.message)
+            sessionToken = fullData.token;
+            goToProgramMainState();
             break;
         case 'AUTH_FAIL':
         case 'TOKEN_EXPIRED':
-            console.log(data.data.message)
+            sessionToken = null;
             authenticationProcess();
             break;
     }
@@ -113,7 +120,7 @@ function clearConsole() {
     console.log('\u001B[2J\u001B[0;0f');
 }
 
-function getAvailableAuctions(sessionToken) {
+function getAvailableAuctions() {
     const data = {
         action: actions.auction.name,
         type: actions.auction.type.get,
@@ -123,53 +130,75 @@ function getAvailableAuctions(sessionToken) {
     sendMessageToServer(clientSocket, data)
 }
 
-async function createAuction(sessionToken) {
+async function createAuction() {
     blockRender = true;
     const data = {
         name: await inputQuestion('\nNome do leilão? '),
         initialValue: await inputQuestion('\nValor inicial? (ex: 10.00) '),
-        endDate: await inputQuestion('\nHorário de término? (ex: YYYY-MM-DD HH:mm) '),
-        token: sessionToken
+        minutes: await inputQuestion('\nQuanto tempo durará o leilão? (em minutos) ')
     }
-    await sendMessageToServer(clientSocket, data)
+    await sendMessageToServer(clientSocket, { data: data, action: actions.auction.name, type: actions.auction.type.create, token: sessionToken })
     blockRender = false;
 }
 
-function processNotificationAction(data) {
-    switch (data.type) {
-        case '':
-    }
-    console.log(`\nRecebido: ${data}`);
-    if (data == messages.startingMessage) {
-        auctionState = 'STARTED';
-    }
-
-    if (data == messages.sentBidErrorMessage) {
-        console.log(messages.sentBidErrorMessage);
-    }
-
-    if (auctionState == 'STARTED') {
-        sendBid(clientSocket);
+function processNotificationAction(fullData) {
+    switch (fullData.type) {
+        case 'NEW_USER_JOINNED':
+            processNewUserJoinned(fullData.data);
+            goToProgramMainState();
     }
 }
 
-function processAuctionAction(fullData) {
+function processNewUserJoinned(data) {
+    console.log(`\n\nO usuário ${data.user} acabou de se conectar ao leilão ${data.auction.name}\n`)
+    sessionAuction = data.auction;
+}
+
+async function processAuctionAction(fullData) {
+    let auctionOption;
     switch (fullData.type) {
         case 'GET_AUCTION':
             blockRender = false;
-            processNewAuctions(fullData.data);
+            processNewAuctions(fullData);
+            auctionOption = await inputQuestion('\nEscolha um leilão para participar: ');
+            associateOnAuction(auctionOption);
             break;
         case 'NEW_AUCTION':
-            renderAuctions();
+            saveAndRenderNewAuctions(fullData);
+            auctionOption = await inputQuestion('\nEscolha um leilão para participar: ');
+            associateOnAuction(auctionOption);
             break;
-        case 'AUCTION_ASSOCIATE':
+        case 'AUCTION_ASSOCIATE_SUCCESS':
+            processAuctionAssociation(fullData);
+            goToProgramMainState();
+            break;
+        case 'AUCTION_ASSOCIATE_ERROR':
+            console.log("\nErro ao associar")
+            processAssociationError(fullData);
+            goToProgramMainState();
+            blockRender = false;
+            break;
+        case 'SUCCESS_CREATE_AUCTION':
+            processSuccessAuctionCreate(fullData);
             break;
     }
 }
 
-function processNewAuctions(data) {
-    sessionToken = data.token;
-    auctions = data;
+function processSuccessAuctionCreate(fullData) {
+    sessionToken = fullData.sessionToken;
+}
+
+function processNewAuctions(fullData) {
+    sessionToken = fullData.token;
+    saveAndRenderNewAuctions(fullData);
+}
+
+function processAssociationError(fullData) {
+    sessionToken = fullData.token;
+}
+
+function saveAndRenderNewAuctions(fullData) {
+    auctions = fullData.data;
     renderAuctions();
 }
 
@@ -177,10 +206,72 @@ function renderAuctions() {
     if (blockRender) {
         return;
     }
+    clearConsole();
+    console.log('Auctions: ')
     Object.values(auctions).forEach((element, index) => {
-        console.log(`${index}: ${element.name} | currentValue: ${element.currentValue} | owner: ${element.owner} | ` +
-            `status: ${element.status} | finish: ${element.endDate}\n`)
+        console.log(`${index}: ${element.name} | Valor atual: ${element.currentValue} | dono: ${element.owner} | ` +
+            `status: ${element.status} |` + correctTimeShow(element))
     });
+}
+
+function correctTimeShow(element) {
+    if (element.endDate) {
+        return ` Término: ${element.endDate}`;
+    }
+    return ` Duração: ${Number(element.minutes)} minuto` + (Number(element.minutes) > 1 ? 's' : '');
+}
+
+async function renderSingleAuction(data) {
+    console.log(`${data.name} | Valor atual: ${data.currentValue} | dono: ${data.owner} | ` +
+        `status: ${data.status} |` + (` Término: ${data.endDate}` || `Duração: ${data.minutes} minutos`))
+    if (data.status === 'WAITING_PLAYERS') {
+        console.log('\nEsperando mais jogadores para começar... ')
+        return;
+    }
+    if (data.status === 'GOING_ON') {
+        const bid = await inputQuestion('\nDê um lance: (ex: 10.00) ');
+        sendMessageToServer(clientSocket, { data: { auction: sessionAuction, bid: Number(bid) }, token: sessionToken, action: actions.bid.name, type: actions.bid.type.new });
+    }
+}
+
+function associateOnAuction(auctionOption) {
+    const auctionToAssociate = Object.values(auctions).filter((element, index) => {
+        return auctionOption === element.name || auctionOption == index
+    })[0];
+    blockRender = true;
+    sendMessageToServer(clientSocket, { data: auctionToAssociate, action: actions.auction.name, type: actions.auction.type.associate, token: sessionToken })
+}
+
+function processAuctionAssociation(fullData) {
+    sessionToken = fullData.token;
+    sessionAuction = fullData.data;
+    blockRender = true;
+}
+
+function processBidAction(fullData) {
+    switch (fullData.type) {
+        case 'UPDATED_BID':
+            processUpdatedAuctionValue(fullData.data);
+            break;
+        case 'ERROR_BID':
+            sessionToken = fullData.token;
+            console.log(fullData.data.message)
+            goToProgramMainState(true);
+            break;
+        case 'SUCESS_NEW_BID':
+            processSuccessNewBid(fullData);
+            break;
+    }
+}
+
+function processSuccessNewBid(fullData) {
+    sessionToken = fullData.token;
+    processUpdatedAuctionValue(fullData.data);
+}
+
+function processUpdatedAuctionValue(data) {
+    sessionAuction = data.auction;
+    goToProgramMainState();
 }
 
 function sendBid(socket) {
@@ -202,20 +293,22 @@ function promisifyInputQuestion() {
 }
 
 function onDataEvent() {
-    clientSocket.on('data', function (data) {
-        data = JSON.parse(data)
-        console.log(data)
+    clientSocket.on('data', function (fullData) {
+        fullData = JSON.parse(fullData)
+        // console.log(fullData)
         // clearConsole();
-        switch (data.action) {
+        switch (fullData.action) {
             case 'AUTH':
-                processAuthenticationAction(data);
+                processAuthenticationAction(fullData);
                 break;
             case 'NOTIFICATION':
-                processNotificationAction(data);
+                processNotificationAction(fullData);
                 break;
             case 'AUCTION':
-                processAuctionAction(data);
+                processAuctionAction(fullData);
                 break;
+            case 'BID':
+                processBidAction(fullData);
             default:
                 break;
         }
