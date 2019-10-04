@@ -21,7 +21,6 @@ async function connectToAuction() {
     onDataEvent();
     onErrorEvent();
     onEndEvent();
-    // onCloseEvent(client);
 }
 
 function createSocket() {
@@ -37,11 +36,22 @@ function startConnection(serverPort, serverIP) {
     });
 }
 
+function promisifyInputQuestion() {
+    const readLineInterface = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    return (question) => {
+        return new Promise((resolve, reject) => {
+            readLineInterface.question(question, (input) => resolve(input))
+        });
+    }
+}
+
 async function goToProgramMainState(dontClearConsole) {
     if (!dontClearConsole) {
         clearConsole();
     }
-
 
     if (sessionToken && sessionAuction) {
         // const option = await inputQuestion('\n 0: CRIAR ou 1: BUSCAR um leilão? ');
@@ -77,14 +87,12 @@ function verifyNegativeAnswer(isUser) {
 }
 
 function createUser(messageToSent) {
-    console.log('Creating User')
     messageToSent.action = actions.auth.name;
     messageToSent.type = actions.auth.type.createUser;
     sendMessageToServer(clientSocket, messageToSent);
 }
 
 function login(messageToSent) {
-    console.log('Login')
     messageToSent.action = actions.auth.name;
     messageToSent.type = actions.auth.type.login;
     sendMessageToServer(clientSocket, messageToSent);
@@ -126,7 +134,6 @@ function getAvailableAuctions() {
         type: actions.auction.type.get,
         token: sessionToken
     };
-    console.log('Available auctions')
     sendMessageToServer(clientSocket, data)
 }
 
@@ -173,7 +180,7 @@ async function processAuctionAction(fullData) {
             goToProgramMainState();
             break;
         case 'AUCTION_ASSOCIATE_ERROR':
-            console.log("\nErro ao associar")
+            console.log(fullData.message)
             processAssociationError(fullData);
             goToProgramMainState();
             blockRender = false;
@@ -206,9 +213,16 @@ function renderAuctions() {
     if (blockRender) {
         return;
     }
-    clearConsole();
-    console.log('Auctions: ')
-    Object.values(auctions).forEach((element, index) => {
+    const filterFinished = Object.values(auctions).filter((element) => {
+        return element.status != 'FINISHED';
+    })
+    // clearConsole();
+    console.log('Leilões: ')
+    if (!filterFinished.length) {
+        console.log('\nNão há leilões ativos no momento')
+        return;
+    }
+    filterFinished.forEach((element, index) => {
         console.log(`${index}: ${element.name} | Valor atual: ${element.currentValue} | dono: ${element.owner} | ` +
             `status: ${element.status} |` + correctTimeShow(element))
     });
@@ -239,6 +253,7 @@ function associateOnAuction(auctionOption) {
         return auctionOption === element.name || auctionOption == index
     })[0];
     blockRender = true;
+    console.log(sessionToken)
     sendMessageToServer(clientSocket, { data: auctionToAssociate, action: actions.auction.name, type: actions.auction.type.associate, token: sessionToken })
 }
 
@@ -274,24 +289,6 @@ function processUpdatedAuctionValue(data) {
     goToProgramMainState();
 }
 
-function sendBid(socket) {
-    question.question('\nInsira o seu lance: ', (bid) => {
-        socket.write(bid);
-    });
-}
-
-function promisifyInputQuestion() {
-    const readLineInterface = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    return (question) => {
-        return new Promise((resolve, reject) => {
-            readLineInterface.question(question, (input) => resolve(input))
-        });
-    }
-}
-
 function onDataEvent() {
     clientSocket.on('data', function (fullData) {
         fullData = JSON.parse(fullData)
@@ -315,20 +312,9 @@ function onDataEvent() {
     });
 }
 
-function onCloseEvent(socket) {
-    socket.on('close', function (err) {
-        console.log(err)
-        console.log('\nConexão encerrada.');
-        // socket.destroy();
-        // waitToReconnect();
-    });
-}
-
 function onEndEvent() {
     clientSocket.on('end', function () {
         console.log('\nO servidor encerrou a conexão.')
-        // socket.destroy();
-        // process.exit(1);
     });
 }
 

@@ -35,7 +35,7 @@ function socketOnDataEvent(socket) {
 
 function processData(socket, fullData) {
     // clearConsole();
-    // console.log(fullData)
+    console.log(fullData)
     switch (fullData.action) {
         case 'AUTH':
             processAuthenticationAction(socket, fullData);
@@ -173,25 +173,29 @@ async function getAuctions(socket, newSession) {
 }
 
 async function createAuction(socket, newSession, fullData) {
-    console.log(newSession, fullData)
     auctions = await auctionService.createAuction(newSession, fullData.data);
     sendData(socket, { token: newSession.token, action: actions.auction.name, type: actions.auction.type.successCreate });
     multicast({ data: auctions, action: actions.auction.name, type: actions.auction.type.new }, clientsSocketList);
 }
 
 async function associateSocketOnAuction(newSession, fullData, socket) {
+    console.log('\n\n')
+    console.log(newSession, fullData)
     auctionsSocketList[fullData.data.id] = auctionsSocketList[fullData.data.id] || []
 
     const auctionVerify = await auctionService.verifyAuction(fullData.data.id, auctionsSocketList[fullData.data.id].length, minimumNumberOfParticipants);
-    if (!fullData.data.id || !auctionVerify) {
+    if (!fullData.data.id || auctionVerify.error) {
         sendData(socket, {
-            data: fullData.data, token: newSession.token, message: "Erro ao associar ao leilão\n", action: actions.auction.name,
+            data: fullData.data, token: newSession.token, message: auctionVerify.message, action: actions.auction.name,
             type: actions.auction.type.associateError
         });
         return;
     }
+    console.log(auctionsSocketList[fullData.data.id])
+    console.log(auctionsSocketList[fullData.data.id].length)
 
     auctionsSocketList[fullData.data.id].push(socket);
+    removeSocketIfIsInList(clientsSocketList, socket);
     sendData(socket, { data: fullData.data, token: newSession.token, action: actions.auction.name, type: actions.auction.type.associateSuccess });
     multicast({
         data: { user: newSession.user, auction: fullData.data }, action: actions.notification.name,
@@ -243,7 +247,7 @@ function socketOnErrorEvent(socket) {
         clientsSocketListWaitingAuth = removeSocketIfIsInList(clientsSocketListWaitingAuth, socket);
         clientsSocketList = removeSocketIfIsInList(clientsSocketList, socket);
         Object.keys(auctionsSocketList).forEach((auctionHash) => {
-            auctionsSocketList[auctionHash] = removeSocketIfIsInList(auctionsSocketList[auctionHash]);
+            auctionsSocketList[auctionHash] = removeSocketIfIsInList(auctionsSocketList[auctionHash], socket);
         })
 
     });

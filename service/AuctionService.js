@@ -35,13 +35,13 @@ class AuctionService {
         const auctions = await this.getAuctions();
         const myAuction = auctions[id];
         if (!myAuction || myAuction.status === 'FINISHED') {
-            return null;
+            return { error: true, message: "\nO leilão já está finalizado ou não existe!" };
         }
         if (myAuction.status === 'GOING_ON' && this._hasEnd(myAuction.endDate)) {
             myAuction.status = 'FINISHED';
             auctions[id] = myAuction;
             await auctionRepository.setAuctions(auctions);
-            return null;
+            return { error: true, message: "\nO leilão citado terminou" };
         }
         if (numberOfPlayers + 1 >= minimumNumberOfParticipants && myAuction.status === 'WAITING_PLAYERS') {
             myAuction.status = 'GOING_ON';
@@ -54,7 +54,6 @@ class AuctionService {
 
     async newBid(session, data) {
         const auctions = await this.getAuctions();
-        console.log(data)
 
         if (!auctions[data.auction.id]) {
             return { error: true, message: "Leilão não encontrado\n\n" };
