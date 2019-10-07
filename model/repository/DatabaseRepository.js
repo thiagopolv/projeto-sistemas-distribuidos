@@ -17,7 +17,7 @@ class DatabaseRepository {
             memoryValue = JSON.parse(read.toString());
         } catch (e) {
             console.log(e)
-            this._retryOperation(memoryValue, this._writeOnDatabase);
+            this._retryOperation(this._writeOnDatabase, memoryValue);
         }
 
         return memoryValue;

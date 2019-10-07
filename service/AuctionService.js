@@ -10,20 +10,34 @@ class AuctionService {
 
     async getAuctions() {
         const auctions = await auctionRepository.getAuctions();
-        const filtered = Object.keys(auctions).filter((element) => {
-            return element.status === 'GOING_ON' && this._hasEnd(element.endDate);
-        }).map((filteredElement) => {
-            filteredElement.status = 'FINISHED';
-            filteredElement.endDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
-            auctions[filteredElement.id] = filteredElement;
-            return filteredElement
-        })
+        return auctions;
+    }
 
+    async searchFinishedAuctions() {
+        const auctions = await this.getAuctions();
+        const bets = await betRepository.getBets();
+        const filtered = Object.values(auctions)
+            .filter((element) => {
+                return element.status === 'GOING_ON' && this._hasEnd(element.endDate);
+            })
+            .map((filteredElement) => {
+                filteredElement.status = 'FINISHED';
+                filteredElement.endDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+                filteredElement.winner = bets[filteredElement.lastBet].owner;
+                auctions[filteredElement.id] = filteredElement;
+
+                return filteredElement
+            })
 
         if (filtered.length) {
             await auctionRepository.setAuctions(auctions);
         }
-        return auctions;
+
+        return filtered;
+    }
+
+    async getWinnerBet() {
+
     }
 
     async createAuction(session, data) {
@@ -75,7 +89,6 @@ class AuctionService {
         if (Number(auctions[data.auction.id].currentValue) >= Number(data.bid)) {
             return { error: true, message: "\nO valor do lance é menor ou igual ao atual do Leilão\n\n" };
         }
-        console.log('passei aqui')
         const bets = await betRepository.getBets();
         const newBet = this._generateBid(session.user, data.bid);
         bets[newBet.id] = newBet;

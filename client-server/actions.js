@@ -24,8 +24,9 @@ module.exports = actions = {
     notification: {
         name: 'NOTIFICATION',
         type: {
-            newUser: 'NEW_USER_JOINNED'
-        }
+            newUser: 'NEW_USER_JOINNED',
+            finishedAuction: 'FINISHED_AUCTION'
+        },
     },
     bid: {
         name: 'BID',

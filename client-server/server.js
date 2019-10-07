@@ -25,6 +25,7 @@ function startAuction() {
     onConnectionEvent(server);
     onEndEvent(server);
     onErrorEvent(server);
+    doFinishAuctionsRoutine();
 }
 
 function socketOnDataEvent(socket) {
@@ -33,9 +34,34 @@ function socketOnDataEvent(socket) {
     });
 }
 
+function doFinishAuctionsRoutine() {
+    setInterval(searchAuctionsTofinish, 3000);
+}
+
+async function searchAuctionsTofinish() {
+    const finishedAuctions = await auctionService.searchFinishedAuctions();
+    console.log(finishedAuctions)
+
+    if (finishedAuctions.length) {
+        finishedAuctions.forEach((auction) => {
+            multicast(message, {
+                data: { auction: auction }, action: actions.notification.name,
+                type: actions.notification.type.finishedAuction
+            });
+            changeSocketList(auctionsSocketList[auction.id], clientsSocketList);
+            delete auctionsSocketList[auction.id];
+        })
+    }
+}
+
+function changeSocketList(oldSocketList, newSocketList) {
+    oldSocketList.forEach((socket) => {
+        addSocketIfNotOnList(socket, newSocketList);
+    })
+}
+
 function processData(socket, fullData) {
     // clearConsole();
-    console.log(fullData)
     switch (fullData.action) {
         case 'AUTH':
             processAuthenticationAction(socket, fullData);
@@ -73,13 +99,12 @@ async function processNewBidAction(socket, data, newSession) {
         });
         return;
     }
-
     sendData(socket, { data: { auction: bidAnswer.auction }, token: newSession.token, action: actions.bid.name, type: actions.bid.type.success });
 
     addSocketIfNotOnList(socket, auctionsSocketList[data.auction.id]);
 
     multicast({ data: { auction: bidAnswer.auction }, action: actions.bid.name, type: actions.bid.type.update },
-        auctionsSocketList[bidAnswer.auction.id]);
+        auctionsSocketList[data.auction.id]);
 }
 
 function processAuthenticationAction(socket, fullData) {
@@ -131,7 +156,8 @@ function buildDataToSend(content, action, type, token) {
 }
 
 function sendData(socket, data) {
-    socket.write(JSON.stringify(data));
+    const objectStringfied = JSON.stringify(data).replace('\n', '').replace('\t', '');
+    socket.write(objectStringfied);
 }
 
 async function processAuctionAction(socket, fullData) {
@@ -166,8 +192,8 @@ function addSocketIfNotOnList(socket, socketList) {
     }
 }
 
-function socketIsOnList(socket) {
-    return clientsSocketList.some(storagedSocket => JSON.stringify(storagedSocket) === JSON.stringify(socket));
+function socketIsOnList(socket, socketList) {
+    return socketList.some(storagedSocket => JSON.stringify(storagedSocket) === JSON.stringify(socket));
 }
 
 async function getAuctions(socket, newSession) {
@@ -182,8 +208,6 @@ async function createAuction(socket, newSession, fullData) {
 }
 
 async function associateSocketOnAuction(newSession, fullData, socket) {
-    console.log('\n\n')
-    console.log(newSession, fullData)
     auctionsSocketList[fullData.data.id] = auctionsSocketList[fullData.data.id] || []
 
     const auctionVerify = await auctionService.verifyAuction(fullData.data.id);
@@ -196,14 +220,11 @@ async function associateSocketOnAuction(newSession, fullData, socket) {
         return;
     }
 
-    auctionsSocketList[fullData.data.id].push(socket);
+    addSocketIfNotOnList(socket, auctionsSocketList[fullData.data.id]);
     clientsSocketList = removeSocketIfIsInList(clientsSocketList, socket);
 
     const refreshedAuction = await auctionService.getCurrentAuctionStatus(fullData.data.id, auctionsSocketList[fullData.data.id].length,
         minimumNumberOfParticipants);
-
-    console.log('Refreshed', refreshedAuction)
-
 
     sendData(socket, {
         data: { auction: refreshedAuction }, token: newSession.token, action: actions.auction.name,
@@ -218,29 +239,6 @@ async function associateSocketOnAuction(newSession, fullData, socket) {
 
 function clearConsole() {
     console.log('\u001B[2J\u001B[0;0f');
-}
-
-function verifyIfReceivedBidIsLessThanCurrentBid(data, socket) {
-    let dataLessThanCurrentBid = false;
-    if (data <= currentBid) {
-        console.log(messages.receivedBidErrorMessage.replace('{}', data));
-        socket.write(messages.sentBidErrorMessage);
-        dataLessThanCurrentBid = true;
-    }
-    currentBid = data;
-    return dataLessThanCurrentBid;
-}
-
-function verifyIfAuctionIsFinished(data, server, isLessThanCurrentBid) {
-    setTimeout(() => {
-        lastBid = data;
-        console.log('actual: ' + currentBid);
-        console.log('last:' + lastBid);
-        if (currentBid == lastBid && !isLessThanCurrentBid) {
-            multicast(messages.finishedAuctionMessage.replace('{}', data));
-            // closeSocketsAndServer(server);
-        }
-    }, 20000)
 }
 
 function createServer() {

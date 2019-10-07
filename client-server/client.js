@@ -50,11 +50,10 @@ function promisifyInputQuestion() {
 
 async function goToProgramMainState(dontClearConsole) {
     if (!dontClearConsole) {
-        clearConsole();
+        // clearConsole();
     }
 
     if (sessionToken && sessionAuction) {
-        // const option = await inputQuestion('\n 0: CRIAR ou 1: BUSCAR um leilão? ');
         renderSingleAuction(sessionAuction);
         return;
     }
@@ -154,7 +153,19 @@ function processNotificationAction(fullData) {
         case 'NEW_USER_JOINNED':
             processNewUserJoinned(fullData.data);
             goToProgramMainState();
+            break;
+        case 'FINISHED_AUCTION':
+            console.log('\nO leilão terminou!')
+            processFinishedAuction(fullData.data);
+            goToProgramMainState();
+            break;
     }
+}
+
+function processFinishedAuction({ auction }) {
+    console.log(`\nO vencedor do leilão foi ${auction.winner} com o lance de ${auction.currentValue} finalizado ${auction.endDate}`);
+    sessionAuction = null;
+    blockRender = false;
 }
 
 function processNewUserJoinned(data) {
@@ -320,9 +331,8 @@ function processUpdatedAuctionValue(data) {
 }
 
 function onDataEvent() {
-    clientSocket.on('data', function (fullData) {
-        fullData = JSON.parse(fullData)
-        // console.log(fullData)
+    clientSocket.on('data', function (dataFromBuffer) {
+        const fullData = JSON.parse(dataFromBuffer)
         // clearConsole();
         switch (fullData.action) {
             case 'AUTH':
