@@ -10,6 +10,19 @@ class AuctionService {
 
     async getAuctions() {
         const auctions = await auctionRepository.getAuctions();
+        const filtered = Object.keys(auctions).filter((element) => {
+            return element.status === 'GOING_ON' && this._hasEnd(element.endDate);
+        }).map((filteredElement) => {
+            filteredElement.status = 'FINISHED';
+            filteredElement.endDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+            auctions[filteredElement.id] = filteredElement;
+            return filteredElement
+        })
+
+
+        if (filtered.length) {
+            await auctionRepository.setAuctions(auctions);
+        }
         return auctions;
     }
 
@@ -23,7 +36,6 @@ class AuctionService {
             owner: session.user,
             status: "WAITING_PLAYERS",
             startedDate: new Date(Date.now() - new Date().getTimezoneOffset() * 60000),
-            endDate: data.endDate,
             minutes: data.minutes,
             id: uuid
         }
@@ -31,24 +43,25 @@ class AuctionService {
         return auctions;
     }
 
-    async verifyAuction(id, numberOfPlayers, minimumNumberOfParticipants) {
+    async verifyAuction(id) {
         const auctions = await this.getAuctions();
         const myAuction = auctions[id];
         if (!myAuction || myAuction.status === 'FINISHED') {
             return { error: true, message: "\nO leilão já está finalizado ou não existe!" };
         }
-        if (myAuction.status === 'GOING_ON' && this._hasEnd(myAuction.endDate)) {
-            myAuction.status = 'FINISHED';
-            auctions[id] = myAuction;
-            await auctionRepository.setAuctions(auctions);
-            return { error: true, message: "\nO leilão citado terminou" };
-        }
-        if (numberOfPlayers + 1 >= minimumNumberOfParticipants && myAuction.status === 'WAITING_PLAYERS') {
+        return {};
+    }
+
+    async getCurrentAuctionStatus(id, numberOfPlayers, minimumNumberOfParticipants) {
+        const auctions = await this.getAuctions();
+        const myAuction = auctions[id];
+        if (numberOfPlayers >= minimumNumberOfParticipants && myAuction.status === 'WAITING_PLAYERS') {
             myAuction.status = 'GOING_ON';
             myAuction.endDate = this._dateMinutesFromNow(myAuction.minutes)
             auctions[id] = myAuction;
             await auctionRepository.setAuctions(auctions);
         }
+
         return myAuction;
     }
 
@@ -62,6 +75,7 @@ class AuctionService {
         if (Number(auctions[data.auction.id].currentValue) >= Number(data.bid)) {
             return { error: true, message: "\nO valor do lance é menor ou igual ao atual do Leilão\n\n" };
         }
+        console.log('passei aqui')
         const bets = await betRepository.getBets();
         const newBet = this._generateBid(session.user, data.bid);
         bets[newBet.id] = newBet;

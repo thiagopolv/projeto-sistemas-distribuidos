@@ -58,22 +58,26 @@ async function processBidAction(socket, fullData) {
     }
     switch (fullData.type) {
         case 'NEW_BID':
-            processNewBidAction(socket, fullData, newSession);
+            processNewBidAction(socket, fullData.data, newSession);
             break;
     }
 }
 
-async function processNewBidAction(socket, fullData, newSession) {
-    const bidAnswer = await auctionService.newBid(newSession, fullData.data);
+async function processNewBidAction(socket, data, newSession) {
+    const bidAnswer = await auctionService.newBid(newSession, data);
+    auctionsSocketList[data.auction.id] = auctionsSocketList[data.auction.id] || []
     if (bidAnswer.error) {
         sendData(socket, {
-            data: { auction: fullData.data.auction, message: bidAnswer.message }, token: newSession.token, action: actions.bid.name,
+            data: { auction: data.auction, message: bidAnswer.message }, token: newSession.token, action: actions.bid.name,
             type: actions.bid.type.error
         });
         return;
     }
 
     sendData(socket, { data: { auction: bidAnswer.auction }, token: newSession.token, action: actions.bid.name, type: actions.bid.type.success });
+
+    addSocketIfNotOnList(socket, auctionsSocketList[data.auction.id]);
+
     multicast({ data: { auction: bidAnswer.auction }, action: actions.bid.name, type: actions.bid.type.update },
         auctionsSocketList[bidAnswer.auction.id]);
 }
@@ -121,10 +125,9 @@ function migrateToClientsList(socket) {
 }
 
 function buildDataToSend(content, action, type, token) {
-    const data = {
+    return {
         data: content, action, type, token
     }
-    return data;
 }
 
 function sendData(socket, data) {
@@ -138,7 +141,7 @@ async function processAuctionAction(socket, fullData) {
         sendData(socket, obj);
         return;
     }
-    addSocketIfNotOnList(socket);
+    addSocketIfNotOnList(socket, clientsSocketList);
 
     switch (fullData.type) {
         case 'GET_AUCTION':
@@ -157,14 +160,14 @@ async function getAuthentication(token) {
     return await userService.verifySession(token);
 }
 
-function addSocketIfNotOnList(socket) {
-    if (socketIsNotOnList(socket)) {
-        clientsSocketList.push(socket);
+function addSocketIfNotOnList(socket, socketList) {
+    if (!socketIsOnList(socket, socketList)) {
+        socketList.push(socket);
     }
 }
 
-function socketIsNotOnList(socket) {
-    return clientsSocketList.some(storagedSocket => JSON.stringify(storagedSocket) !== JSON.stringify(socket));
+function socketIsOnList(socket) {
+    return clientsSocketList.some(storagedSocket => JSON.stringify(storagedSocket) === JSON.stringify(socket));
 }
 
 async function getAuctions(socket, newSession) {
@@ -183,22 +186,32 @@ async function associateSocketOnAuction(newSession, fullData, socket) {
     console.log(newSession, fullData)
     auctionsSocketList[fullData.data.id] = auctionsSocketList[fullData.data.id] || []
 
-    const auctionVerify = await auctionService.verifyAuction(fullData.data.id, auctionsSocketList[fullData.data.id].length, minimumNumberOfParticipants);
-    if (!fullData.data.id || auctionVerify.error) {
+    const auctionVerify = await auctionService.verifyAuction(fullData.data.id);
+    if (auctionVerify.error) {
+        delete auctionsSocketList[fullData.data.id]
         sendData(socket, {
             data: fullData.data, token: newSession.token, message: auctionVerify.message, action: actions.auction.name,
             type: actions.auction.type.associateError
         });
         return;
     }
-    console.log(auctionsSocketList[fullData.data.id])
-    console.log(auctionsSocketList[fullData.data.id].length)
 
     auctionsSocketList[fullData.data.id].push(socket);
-    removeSocketIfIsInList(clientsSocketList, socket);
-    sendData(socket, { data: fullData.data, token: newSession.token, action: actions.auction.name, type: actions.auction.type.associateSuccess });
+    clientsSocketList = removeSocketIfIsInList(clientsSocketList, socket);
+
+    const refreshedAuction = await auctionService.getCurrentAuctionStatus(fullData.data.id, auctionsSocketList[fullData.data.id].length,
+        minimumNumberOfParticipants);
+
+    console.log('Refreshed', refreshedAuction)
+
+
+    sendData(socket, {
+        data: { auction: refreshedAuction }, token: newSession.token, action: actions.auction.name,
+        type: actions.auction.type.associateSuccess
+    });
+
     multicast({
-        data: { user: newSession.user, auction: fullData.data }, action: actions.notification.name,
+        data: { user: newSession.user, auction: refreshedAuction }, action: actions.notification.name,
         type: actions.notification.type.newUser
     }, auctionsSocketList[fullData.data.id]);
 }
