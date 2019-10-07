@@ -294,7 +294,6 @@ function associateOnAuction(auctionOption) {
         return auctionOption === element.name || auctionOption == index
     })[0];
     blockRender = true;
-    console.log(sessionToken)
     sendMessageToServer(clientSocket, { data: auctionToAssociate, action: actions.auction.name, type: actions.auction.type.associate, token: sessionToken })
 }
 
