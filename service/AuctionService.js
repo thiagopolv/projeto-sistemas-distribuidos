@@ -17,8 +17,8 @@ class AuctionService {
         const auctions = await this.getAuctions();
         const bets = await betRepository.getBets();
         const filtered = Object.values(auctions)
-            .filter((element) => {
-                return element.status === 'GOING_ON' && this._hasEnd(element.endDate);
+            .filter((element) => {                
+                return element.status === 'GOING_ON' && this._hasEnd(element.endDate) && element.lastBet;
             })
             .map((filteredElement) => {
                 filteredElement.status = 'FINISHED';
@@ -60,6 +60,7 @@ class AuctionService {
     async verifyAuction(id) {
         const auctions = await this.getAuctions();
         const myAuction = auctions[id];
+        console.log(id)
         if (!myAuction || myAuction.status === 'FINISHED') {
             return { error: true, message: "\nO leilão já está finalizado ou não existe!" };
         }
@@ -107,7 +108,7 @@ class AuctionService {
 
     _dateMinutesFromNow(minutes) {
         const dateNowInCorrectZone = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-        return new Date(dateNowInCorrectZone + Number(minutes || 1) * 1000 * 60)
+        return new Date(dateNowInCorrectZone.getTime() + Number(minutes || 1) * 1000 * 60)
     }
 
     _generateBid(user, bid) {

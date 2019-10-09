@@ -3,7 +3,12 @@ const net = require('net');
 
 const messages = require('./messages');
 const actions = require('./actions');
-const inputQuestion = promisifyInputQuestion();
+let inputQuestion = promisifyInputQuestion();
+
+const readLineInterface = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 const negativeAnswers = ['no', 'n', 'nao', 'não'];
 const randomPort = 3000;
@@ -37,10 +42,6 @@ function startConnection(serverPort, serverIP) {
 }
 
 function promisifyInputQuestion() {
-    const readLineInterface = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
     return (question) => {
         return new Promise((resolve, reject) => {
             readLineInterface.question(question, (input) => resolve(input))
@@ -48,7 +49,7 @@ function promisifyInputQuestion() {
     }
 }
 
-async function goToProgramMainState(dontClearConsole) {
+function goToProgramMainState(dontClearConsole) {
     if (!dontClearConsole) {
         // clearConsole();
     }
@@ -58,14 +59,8 @@ async function goToProgramMainState(dontClearConsole) {
         return;
     }
     if (sessionToken) {
-        blockRender = true;
-        const option = await inputQuestion('\nCRIAR ou BUSCAR um leilão? ');
-        blockRender = false;
-        if (option === 'CRIAR') {
-            return createAuction();
-        } else {
-            return getAvailableAuctions();
-        }
+        selectAuctionOrCreate();
+        return;
     }
     authenticationProcess();
 }
@@ -79,6 +74,16 @@ async function authenticationProcess() {
         return;
     }
     login(data);
+}
+
+async function selectAuctionOrCreate() {
+    blockRender = true;
+    const option = await inputQuestion('\nCRIAR ou BUSCAR um leilão? ');
+    blockRender = false;
+    if (option === 'CRIAR') {
+        createAuction();
+    }
+    getAvailableAuctions();
 }
 
 function verifyNegativeAnswer(isUser) {
@@ -152,7 +157,6 @@ function processNotificationAction(fullData) {
     switch (fullData.type) {
         case 'NEW_USER_JOINNED':
             processNewUserJoinned(fullData.data);
-            goToProgramMainState();
             break;
         case 'FINISHED_AUCTION':
             console.log('\nO leilão terminou!')
@@ -163,9 +167,11 @@ function processNotificationAction(fullData) {
 }
 
 function processFinishedAuction({ auction }) {
-    console.log(`\nO vencedor do leilão foi ${auction.winner} com o lance de ${auction.currentValue} finalizado ${auction.endDate}`);
     sessionAuction = null;
     blockRender = false;
+    console.log(`\nO vencedor do leilão foi ${auction.winner} com o lance de ${auction.currentValue} finalizado ${auction.endDate}`);
+    readLineInterface.close();
+    inputQuestion = promisifyInputQuestion();
 }
 
 function processNewUserJoinned(data) {

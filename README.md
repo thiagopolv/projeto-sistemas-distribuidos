@@ -93,4 +93,7 @@ persistência e cache.
 ### Camada de controle
 - Os arquivos client.js e server.js são arquivos que gerenciam os sockets e a comunicação entre eles. Elas são responsáveis por comunicar entre as frentes mandando uma 'ação', o 'tipo da ação' e os dados necessários para a aplicação, por exemplo, o token de sessão.
 
+# Autores
 
+* **Rodrigo Pereira** - [Github](https://github.com/rodrigorpo)
+* **Thiago Pereira** - [Github](https://github.com/thiagopolv)
