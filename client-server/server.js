@@ -229,15 +229,15 @@ async function associateSocketOnAuction(newSession, data, socket) {
 }
 
 function sendMessagesIfSucessfully(socket, newSession, refreshedAuction, { id }) {
-    sendData(socket, {
-        data: { auction: refreshedAuction }, token: newSession.token, action: actions.auction.name,
-        type: actions.auction.type.associateSuccess
-    });
-
     multicast({
         data: { user: newSession.user, auction: refreshedAuction }, action: actions.notification.name,
         type: actions.notification.type.newUser
     }, auctionsSocketList[id]);
+    
+    sendData(socket, {
+        data: { auction: refreshedAuction }, token: newSession.token, action: actions.auction.name,
+        type: actions.auction.type.associateSuccess
+    });
 }
 
 function removeSocketIfNecessary(socket, { id }) {

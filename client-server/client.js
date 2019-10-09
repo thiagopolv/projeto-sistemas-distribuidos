@@ -7,6 +7,7 @@ const actions = require('./actions');
 const { negativeAnswers, clientPort, ipToConnect } = require('../config')
 
 let blockRender = false;
+let messageAfterClear = '';
 let auctions = {};
 let sessionAuction;
 let sessionToken;
@@ -31,7 +32,7 @@ function startConnection(serverPort, serverIP) {
     clientSocket.connect(serverPort, serverIP, () => {
         clearConsole();
         console.log(messages.client.successConnect)
-        goToProgramMainState();
+        goToProgramMainState(true);
     });
 }
 
@@ -50,10 +51,16 @@ function promisifyInputQuestion() {
     }
 }
 
-function goToProgramMainState(dontClearConsole) {
-    if (!dontClearConsole) {
-        // clearConsole();
+function goToProgramMainState(dontClear, message) {
+    if (!blockRender && !dontClear) {
+        clearConsole();
+        if (message !== '') {
+            console.log(message)
+            message = '';
+        }
     }
+
+    console.log(messageAfterClear)
 
     if (sessionToken && sessionAuction) {
         renderSingleAuction(sessionAuction);
@@ -123,15 +130,13 @@ function sendMessageToServer(socket, data) {
 async function processAuthenticationAction(fullData) {
     switch (fullData.type) {
         case 'AUTH_SUCCESS':
-            console.log(fullData.data.message)
             sessionToken = fullData.token;
-            goToProgramMainState();
+            goToProgramMainState(false, fullData.data.message);
             break;
         case 'AUTH_FAIL':
         case 'TOKEN_EXPIRED':
-            console.log(fullData.data.message)
             sessionToken = null;
-            await authenticationProcess();
+            goToProgramMainState(false, fullData.data.message);
             break;
     }
 }
@@ -169,7 +174,6 @@ async function processNotificationAction(fullData) {
             await processNewUserJoinned(fullData.data);
             break;
         case 'FINISHED_AUCTION':
-            console.log(messages.client.auctionFinished)
             await processFinishedAuction(fullData.data);
             break;
     }
@@ -178,10 +182,12 @@ async function processNotificationAction(fullData) {
 function processFinishedAuction({ auction }) {
     sessionAuction = null;
     blockRender = false;
-    console.log(`\nO vencedor do leilão foi ${auction.winner} com o lance de ${auction.currentValue} finalizado ${auction.endDate}`);
+    // console.log(messages.client.auctionFinished)
+    // console.log();
     readLineInterface.close();
     readLineInterface = createInterface();
-    goToProgramMainState();
+    goToProgramMainState(false, messages.client.auctionFinished +
+        `\nO vencedor do leilão foi ${auction.winner} com o lance de ${auction.currentValue} finalizado ${auction.endDate}`);
 }
 
 function createInterface() {
@@ -194,7 +200,6 @@ function createInterface() {
 function processNewUserJoinned(data) {
     console.log(`\n\nO usuário ${data.user} acabou de se conectar ao leilão ${data.auction.name}\n`)
     sessionAuction = data.auction;
-    goToProgramMainState();
 }
 
 async function processAuctionAction(fullData) {
@@ -207,13 +212,12 @@ async function processAuctionAction(fullData) {
             break;
         case 'AUCTION_ASSOCIATE_SUCCESS':
             processAuctionAssociation(fullData);
-            goToProgramMainState();
+            goToProgramMainState(false);
             break;
         case 'AUCTION_ASSOCIATE_ERROR':
-            console.log(fullData.message)
             processAssociationError(fullData);
-            goToProgramMainState();
             blockRender = false;
+            goToProgramMainState(false, fullData.message);
             break;
         case 'SUCCESS_CREATE_AUCTION':
             processSuccessAuctionCreate(fullData);
@@ -226,14 +230,15 @@ async function processAuctionAction(fullData) {
 
 async function doGetAuctionBusinessRules(fullData) {
     blockRender = false;
-    const isEmpty = processNewAuctions(fullData);
+    const { isEmpty, message } = processNewAuctions(fullData);
     if (!isEmpty) {
         const auctionOption = await inputQuestion(messages.client.chooseAuction);
         inputQuestion = promisifyInputQuestion();
         associateOnAuction(auctionOption);
         return
     }
-    goToProgramMainState();
+    blockRender = false;
+    goToProgramMainState(false, message);
 }
 
 async function doCreateAuctionBusinessRules(fullData) {
@@ -271,22 +276,23 @@ function saveAndRenderNewAuctions(fullData) {
 }
 
 function renderAuctions() {
+    let messageTosend = '';
     if (blockRender) {
-        return;
+        return { isEmpty: false };
     }
     const filterFinished = Object.values(auctions).filter((element) => {
         return element.status != 'FINISHED';
     })
-    // clearConsole();
+    clearConsole();
     if (filterFinished.length) {
-        console.log(messages.client.auctions)
+        messageTosend = messages.client.auctions
         filterFinished.forEach((element, index) => {
             printAuction(element, index);
         });
-        return;
+        return { isEmpty: false };
     }
-    console.log(messages.client.notAuctions)
-    return true;
+    messageTosend = messages.client.notAuctions
+    return { isEmpty: true, message: messageTosend };
 }
 
 function printAuction(element, index) {
@@ -318,9 +324,8 @@ async function renderSingleAuction(data) {
         sendMessageToServer(clientSocket, { data: { auction: sessionAuction, bid: Number(bid) }, token: sessionToken, action: actions.bid.name, type: actions.bid.type.new });
     }
     if (data.status === 'FINISHED') {
-        console.log(messages.client.finishedAuction)
         sessionAuction = null;
-        goToProgramMainState(true);
+        goToProgramMainState(true, messages.client.finishedAuction);
     }
 }
 
@@ -345,10 +350,11 @@ async function processBidAction(fullData) {
             break;
         case 'ERROR_BID':
             sessionToken = fullData.token;
-            console.log(fullData.data.message)
-            goToProgramMainState(true);
+            blockRender = false;
+            goToProgramMainState(false, fullData.data.message);
             break;
         case 'SUCESS_NEW_BID':
+            blockRender = false;
             processSuccessNewBid(fullData);
             break;
     }
@@ -356,12 +362,12 @@ async function processBidAction(fullData) {
 
 function processSuccessNewBid(fullData) {
     sessionToken = fullData.token;
-    processUpdatedAuctionValue(fullData.data);
+    sessionAuction = fullData.data.auction;
 }
 
 function processUpdatedAuctionValue(data) {
     sessionAuction = data.auction;
-    goToProgramMainState();
+    goToProgramMainState(false, '');
 }
 
 function onDataEvent() {

@@ -4,5 +4,5 @@ module.exports = {
     ipToConnect: 'localhost',
     serverPort: 3000,
     serverIpAnswering: '',
-    minimumNumberOfParticipants: 1
+    minimumNumberOfParticipants: 2
 }
