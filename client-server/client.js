@@ -3,26 +3,20 @@ const net = require('net');
 
 const messages = require('./messages');
 const actions = require('./actions');
-let inputQuestion = promisifyInputQuestion();
 
-const readLineInterface = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-const negativeAnswers = ['no', 'n', 'nao', 'não'];
-const randomPort = 3000;
-const randomIP = 'localhost';
+const { negativeAnswers, clientPort, ipToConnect } = require('../config')
 
 let blockRender = false;
 let auctions = {};
 let sessionAuction;
 let sessionToken;
 let clientSocket;
+let readLineInterface;
+let inputQuestion = promisifyInputQuestion();
 
 async function connectToAuction() {
     clientSocket = createSocket();
-    startConnection(randomPort, randomIP);
+    startConnection(clientPort, ipToConnect);
     onDataEvent();
     onErrorEvent();
     onEndEvent();
@@ -36,15 +30,22 @@ function createSocket() {
 function startConnection(serverPort, serverIP) {
     clientSocket.connect(serverPort, serverIP, () => {
         clearConsole();
-        console.log('Conectado com sucesso ao servidor.\n')
+        console.log(messages.client.successConnect)
         goToProgramMainState();
     });
 }
 
 function promisifyInputQuestion() {
+    readLineInterface = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
     return (question) => {
-        return new Promise((resolve, reject) => {
-            readLineInterface.question(question, (input) => resolve(input))
+        return new Promise(async (resolve, reject) => {
+            readLineInterface.question(question, (input) => {
+                readLineInterface.close();
+                resolve(input)
+            })
         });
     }
 }
@@ -66,7 +67,8 @@ function goToProgramMainState(dontClearConsole) {
 }
 
 async function authenticationProcess() {
-    const isNewUser = await inputQuestion('\nJá possui cadastro? ');
+    const isNewUser = await inputQuestion(messages.client.isRegister);
+    inputQuestion = promisifyInputQuestion();
     const data = await getAuthData();
 
     if (verifyNegativeAnswer(isNewUser)) {
@@ -78,12 +80,15 @@ async function authenticationProcess() {
 
 async function selectAuctionOrCreate() {
     blockRender = true;
-    const option = await inputQuestion('\nCRIAR ou BUSCAR um leilão? ');
+    const option = await inputQuestion(messages.client.findOrCreateAuction);
+    inputQuestion = promisifyInputQuestion();
     blockRender = false;
-    if (option === 'CRIAR') {
-        createAuction();
+    if (option.toLowerCase() === 'criar') {
+        await createAuction();
     }
-    getAvailableAuctions();
+    if (option.toLowerCase() === 'buscar') {
+        getAvailableAuctions();
+    }
 }
 
 function verifyNegativeAnswer(isUser) {
@@ -103,8 +108,10 @@ function login(messageToSent) {
 }
 
 async function getAuthData() {
-    const user = await inputQuestion(messages.getUserMessage)
-    const password = await inputQuestion(messages.getPasswordMessage);
+    const user = await inputQuestion(messages.client.getUserMessage)
+    inputQuestion = promisifyInputQuestion();
+    const password = await inputQuestion(messages.client.getPasswordMessage);
+    inputQuestion = promisifyInputQuestion();
 
     return { data: { user, password } }
 }
@@ -113,7 +120,7 @@ function sendMessageToServer(socket, data) {
     socket.write(JSON.stringify(data))
 }
 
-function processAuthenticationAction(fullData) {
+async function processAuthenticationAction(fullData) {
     switch (fullData.type) {
         case 'AUTH_SUCCESS':
             console.log(fullData.data.message)
@@ -124,7 +131,7 @@ function processAuthenticationAction(fullData) {
         case 'TOKEN_EXPIRED':
             console.log(fullData.data.message)
             sessionToken = null;
-            authenticationProcess();
+            await authenticationProcess();
             break;
     }
 }
@@ -144,24 +151,26 @@ function getAvailableAuctions() {
 
 async function createAuction() {
     blockRender = true;
-    const data = {
-        name: await inputQuestion('\nNome do leilão? '),
-        initialValue: await inputQuestion('\nValor inicial? (ex: 10.00) '),
-        minutes: await inputQuestion('\nQuanto tempo durará o leilão? (em minutos) ')
-    }
+    const name = await inputQuestion(messages.client.question.auctionName);
+    inputQuestion = promisifyInputQuestion();
+    const initialValue = await inputQuestion(messages.client.question.initialValue);
+    inputQuestion = promisifyInputQuestion();
+    const minutes = await inputQuestion(messages.client.question.minutes)
+    inputQuestion = promisifyInputQuestion();
+
+    const data = { name, initialValue, minutes }
     await sendMessageToServer(clientSocket, { data: data, action: actions.auction.name, type: actions.auction.type.create, token: sessionToken })
     blockRender = false;
 }
 
-function processNotificationAction(fullData) {
+async function processNotificationAction(fullData) {
     switch (fullData.type) {
         case 'NEW_USER_JOINNED':
-            processNewUserJoinned(fullData.data);
+            await processNewUserJoinned(fullData.data);
             break;
         case 'FINISHED_AUCTION':
-            console.log('\nO leilão terminou!')
-            processFinishedAuction(fullData.data);
-            goToProgramMainState();
+            console.log(messages.client.auctionFinished)
+            await processFinishedAuction(fullData.data);
             break;
     }
 }
@@ -171,7 +180,15 @@ function processFinishedAuction({ auction }) {
     blockRender = false;
     console.log(`\nO vencedor do leilão foi ${auction.winner} com o lance de ${auction.currentValue} finalizado ${auction.endDate}`);
     readLineInterface.close();
-    inputQuestion = promisifyInputQuestion();
+    readLineInterface = createInterface();
+    goToProgramMainState();
+}
+
+function createInterface() {
+    return readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
 }
 
 function processNewUserJoinned(data) {
@@ -180,13 +197,13 @@ function processNewUserJoinned(data) {
     goToProgramMainState();
 }
 
-function processAuctionAction(fullData) {
+async function processAuctionAction(fullData) {
     switch (fullData.type) {
         case 'GET_AUCTION':
-            doGetAuctionBusinessRules(fullData);
+            await doGetAuctionBusinessRules(fullData);
             break;
         case 'NEW_AUCTION':
-            doCreateAuctionBusinessRules(fullData);
+            await doCreateAuctionBusinessRules(fullData);
             break;
         case 'AUCTION_ASSOCIATE_SUCCESS':
             processAuctionAssociation(fullData);
@@ -201,6 +218,9 @@ function processAuctionAction(fullData) {
         case 'SUCCESS_CREATE_AUCTION':
             processSuccessAuctionCreate(fullData);
             break;
+        case 'ERROR_CREATE_AUCTION':
+            processErrorAuctionCreate(fullData);
+            break;
     }
 }
 
@@ -208,7 +228,8 @@ async function doGetAuctionBusinessRules(fullData) {
     blockRender = false;
     const isEmpty = processNewAuctions(fullData);
     if (!isEmpty) {
-        const auctionOption = await inputQuestion('\nEscolha um leilão para participar: ');
+        const auctionOption = await inputQuestion(messages.client.chooseAuction);
+        inputQuestion = promisifyInputQuestion();
         associateOnAuction(auctionOption);
         return
     }
@@ -221,12 +242,18 @@ async function doCreateAuctionBusinessRules(fullData) {
     if (blockRender)
         return;
 
-    const auctionOption = await inputQuestion('\nEscolha um leilão para participar: ');
+    const auctionOption = await inputQuestion(messages.client.chooseAuction);
+    inputQuestion = promisifyInputQuestion();
     associateOnAuction(auctionOption);
 }
 
 function processSuccessAuctionCreate(fullData) {
     sessionToken = fullData.token;
+}
+
+function processErrorAuctionCreate(fullData) {
+    sessionToken = fullData.token;
+    goToProgramMainState();
 }
 
 function processNewAuctions(fullData) {
@@ -251,14 +278,15 @@ function renderAuctions() {
         return element.status != 'FINISHED';
     })
     // clearConsole();
-    console.log('\n\nLeilões: ')
-    if (!filterFinished.length) {
-        console.log('\nNão há leilões ativos no momento')
-        return true;
+    if (filterFinished.length) {
+        console.log(messages.client.auctions)
+        filterFinished.forEach((element, index) => {
+            printAuction(element, index);
+        });
+        return;
     }
-    filterFinished.forEach((element, index) => {
-        printAuction(element, index);
-    });
+    console.log(messages.client.notAuctions)
+    return true;
 }
 
 function printAuction(element, index) {
@@ -281,15 +309,16 @@ function correctTimeShow(element) {
 async function renderSingleAuction(data) {
     printAuction(data);
     if (data.status === 'WAITING_PLAYERS') {
-        console.log('\nEsperando mais jogadores para começar... ')
+        console.log(messages.client.waitingPlayers)
         return;
     }
     if (data.status === 'GOING_ON') {
-        const bid = await inputQuestion('\nDê um lance: (ex: 10.00) ');
+        const bid = await inputQuestion(messages.client.exampleBid);
+        inputQuestion = promisifyInputQuestion();
         sendMessageToServer(clientSocket, { data: { auction: sessionAuction, bid: Number(bid) }, token: sessionToken, action: actions.bid.name, type: actions.bid.type.new });
     }
     if (data.status === 'FINISHED') {
-        console.log('\nO leilão foi finalizado!')
+        console.log(messages.client.finishedAuction)
         sessionAuction = null;
         goToProgramMainState(true);
     }
@@ -309,7 +338,7 @@ function processAuctionAssociation(fullData) {
     blockRender = true;
 }
 
-function processBidAction(fullData) {
+async function processBidAction(fullData) {
     switch (fullData.type) {
         case 'UPDATED_BID':
             processUpdatedAuctionValue(fullData.data);
@@ -336,30 +365,33 @@ function processUpdatedAuctionValue(data) {
 }
 
 function onDataEvent() {
-    clientSocket.on('data', function (dataFromBuffer) {
-        const fullData = JSON.parse(dataFromBuffer)
-        // clearConsole();
-        switch (fullData.action) {
-            case 'AUTH':
-                processAuthenticationAction(fullData);
-                break;
-            case 'NOTIFICATION':
-                processNotificationAction(fullData);
-                break;
-            case 'AUCTION':
-                processAuctionAction(fullData);
-                break;
-            case 'BID':
-                processBidAction(fullData);
-            default:
-                break;
-        }
-    });
+    clientSocket.on('data', processData);
+}
+
+async function processData(dataFromBuffer) {
+    const fullData = JSON.parse(dataFromBuffer)
+    // clearConsole();
+    switch (fullData.action) {
+        case 'AUTH':
+            await processAuthenticationAction(fullData);
+            break;
+        case 'NOTIFICATION':
+            await processNotificationAction(fullData);
+            break;
+        case 'AUCTION':
+            await processAuctionAction(fullData);
+            break;
+        case 'BID':
+            await processBidAction(fullData);
+        default:
+            break;
+    }
+
 }
 
 function onEndEvent() {
     clientSocket.on('end', function () {
-        console.log('\nO servidor encerrou a conexão.')
+        console.log(messages.client.serverClosed)
     });
 }
 
@@ -371,14 +403,14 @@ function onErrorEvent() {
             return;
         }
         console.log(err)
-        console.log('\nErro no servidor.')
+        console.log(messages.client.serverError)
         process.exit(1);
     });
 }
 
 function waitToReconnect() {
-    console.log('\nO servidor não respondeu a conexão.')
-    console.log('\nEsperando para reconectar em 1s.')
+    console.log(messages.client.serverNotAnswering)
+    console.log(messages.client.reconect)
     setTimeout(() => {
         connectToAuction();
     }, 1000);

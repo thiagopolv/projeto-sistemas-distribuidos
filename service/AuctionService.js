@@ -17,7 +17,7 @@ class AuctionService {
         const auctions = await this.getAuctions();
         const bets = await betRepository.getBets();
         const filtered = Object.values(auctions)
-            .filter((element) => {                
+            .filter((element) => {
                 return element.status === 'GOING_ON' && this._hasEnd(element.endDate) && element.lastBet;
             })
             .map((filteredElement) => {
@@ -42,6 +42,11 @@ class AuctionService {
 
     async createAuction(session, data) {
         const auctions = await this.getAuctions();
+        console.log(this._existsAuctionWithThisName(auctionRepository, data.name))
+        if (this._existsAuctionWithThisName(auctionRepository, data.name)) {
+            return { error: true, message: '\n Já existe um leilão terminado com esse nome. Por favor selecione outro!' };
+        }
+
         const uuid = uuidv4();
         auctions[uuid] = {
             name: data.name,
@@ -57,12 +62,19 @@ class AuctionService {
         return auctions;
     }
 
-    async verifyAuction(id) {
+    _existsAuctionWithThisName(auctions, name) {
+        return Object.values(auctions).some(a => a.name === name)
+    }
+
+    async verifyAuction(data) {
+        if (!data) {
+            return { error: true, message: "\nO leilão não existe!" };
+        }
+        const id = data.id
         const auctions = await this.getAuctions();
         const myAuction = auctions[id];
-        console.log(id)
         if (!myAuction || myAuction.status === 'FINISHED') {
-            return { error: true, message: "\nO leilão já está finalizado ou não existe!" };
+            return { error: true, message: "\nO leilão já está finalizado" };
         }
         return {};
     }
@@ -83,7 +95,7 @@ class AuctionService {
     async newBid(session, data) {
         const auctions = await this.getAuctions();
 
-        if (!auctions[data.auction.id]) {
+        if (!data.auction || !auctions[data.auction.id]) {
             return { error: true, message: "Leilão não encontrado\n\n" };
         }
 

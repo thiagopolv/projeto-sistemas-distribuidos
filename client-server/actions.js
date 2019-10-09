@@ -1,4 +1,4 @@
-module.exports = actions = {
+module.exports = {
     auth: {
         name: 'AUTH',
         type: {
@@ -15,6 +15,7 @@ module.exports = actions = {
             get: 'GET_AUCTION',
             create: 'CREATE_AUCTION',
             successCreate: "SUCCESS_CREATE_AUCTION",
+            errorCreate: "ERROR_CREATE_AUCTION",
             associate: 'AUCTION_ASSOCIATE',
             associateSuccess: 'AUCTION_ASSOCIATE_SUCCESS',
             associateError: 'AUCTION_ASSOCIATE_ERROR',

@@ -7,13 +7,10 @@ const AuctionService = require('../service/AuctionService');
 const userService = new UserService();
 const auctionService = new AuctionService();
 
-const serverPort = 3000;
-const serverIp = '';
+const { serverPort, serverIpAnswering: serverIp, minimumNumberOfParticipants } = require('../config')
 let clientsSocketListWaitingAuth = [];
 let clientsSocketList = [];
 let auctionsSocketList = {};
-
-const minimumNumberOfParticipants = 2;
 
 function startAuction() {
     const server = createServer();
@@ -59,17 +56,17 @@ function changeSocketList(oldSocketList, newSocketList) {
     })
 }
 
-function processData(socket, fullData) {
+async function processData(socket, fullData) {
     // clearConsole();
     switch (fullData.action) {
         case 'AUTH':
-            processAuthenticationAction(socket, fullData);
+            await processAuthenticationAction(socket, fullData);
             break;
         case 'AUCTION':
-            processAuctionAction(socket, fullData);
+            await processAuctionAction(socket, fullData);
             break;
         case 'BID':
-            processBidAction(socket, fullData);
+            await processBidAction(socket, fullData);
             break;
     }
 }
@@ -77,13 +74,13 @@ function processData(socket, fullData) {
 async function processBidAction(socket, fullData) {
     const newSession = await getAuthentication(fullData.token);
     if (!newSession) {
-        const obj = buildDataToSend({ message: messages.expireSessionMessage }, actions.auth.name, actions.auth.type.expire, null);
+        const obj = buildDataToSend({ message: messages.server.expireSessionMessage }, actions.auth.name, actions.auth.type.expire, null);
         sendData(socket, obj);
         return;
     }
     switch (fullData.type) {
         case 'NEW_BID':
-            processNewBidAction(socket, fullData.data, newSession);
+            await processNewBidAction(socket, fullData.data, newSession);
             break;
     }
 }
@@ -106,13 +103,13 @@ async function processNewBidAction(socket, data, newSession) {
         auctionsSocketList[data.auction.id]);
 }
 
-function processAuthenticationAction(socket, fullData) {
+async function processAuthenticationAction(socket, fullData) {
     switch (fullData.type) {
         case 'LOGIN':
-            processLogin(socket, fullData.data);
+            await processLogin(socket, fullData.data);
             break;
         case 'CREATE_USER':
-            processUserCreation(socket, fullData.data);
+            await processUserCreation(socket, fullData.data);
             break;
     }
 }
@@ -121,11 +118,11 @@ async function processLogin(socket, data) {
     const token = await userService.authenticate(data);
     if (token) {
         migrateToClientsList(socket);
-        const obj = buildDataToSend({ message: messages.successAuthenticationMessage }, actions.auth.name, actions.auth.type.sucess, token);
+        const obj = buildDataToSend({ message: messages.server.successAuthenticationMessage }, actions.auth.name, actions.auth.type.sucess, token);
         sendData(socket, obj);
         return;
     }
-    const obj = buildDataToSend({ message: messages.errorAuthenticationMessage }, actions.auth.name, actions.auth.type.fail, null);
+    const obj = buildDataToSend({ message: messages.server.errorAuthenticationMessage }, actions.auth.name, actions.auth.type.fail, null);
     sendData(socket, obj);
 }
 
@@ -133,12 +130,12 @@ async function processUserCreation(socket, fullData) {
     const createdUser = await userService.createUser(fullData);
     if (createdUser) {
         migrateToClientsList(socket);
-        const obj = buildDataToSend({ user: createdUser.user, message: messages.successCreatingUser },
+        const obj = buildDataToSend({ user: createdUser.user, message: messages.server.successCreatingUser },
             actions.auth.name, actions.auth.type.sucess, createdUser.token);
         sendData(socket, obj);
         return;
     }
-    const obj = buildDataToSend({ message: messages.errorCreatingUser }, actions.auth.name, actions.auth.type.fail, null);
+    const obj = buildDataToSend({ message: messages.server.errorCreatingUser }, actions.auth.name, actions.auth.type.fail, null);
     sendData(socket, obj);
 }
 
@@ -162,7 +159,7 @@ function sendData(socket, data) {
 async function processAuctionAction(socket, fullData) {
     const newSession = await getAuthentication(fullData.token);
     if (!newSession) {
-        const obj = buildDataToSend({ message: messages.expireSessionMessage }, actions.auth.name, actions.auth.type.expire, null);
+        const obj = buildDataToSend({ message: messages.server.expireSessionMessage }, actions.auth.name, actions.auth.type.expire, null);
         sendData(socket, obj);
         return;
     }
@@ -170,13 +167,13 @@ async function processAuctionAction(socket, fullData) {
 
     switch (fullData.type) {
         case 'GET_AUCTION':
-            getAuctions(socket, newSession);
+            await getAuctions(socket, newSession);
             break;
         case 'CREATE_AUCTION':
-            createAuction(socket, newSession, fullData);
+            await createAuction(socket, newSession, fullData);
             break;
         case 'AUCTION_ASSOCIATE':
-            associateSocketOnAuction(newSession, fullData, socket);
+            await associateSocketOnAuction(newSession, fullData.data, socket);
             break;
     }
 }
@@ -204,32 +201,34 @@ async function getAuctions(socket, newSession) {
 async function createAuction(socket, newSession, fullData) {
     addSocketIfNotOnList(socket, clientsSocketList);
     auctions = await auctionService.createAuction(newSession, fullData.data);
+    if (auctions.error) {
+        sendData(socket, { message: auctions.message, token: newSession.token, action: actions.auction.name, type: actions.auction.type.errorCreate });
+        return;
+    }
     sendData(socket, { token: newSession.token, action: actions.auction.name, type: actions.auction.type.successCreate });
     multicast({ data: auctions, action: actions.auction.name, type: actions.auction.type.new }, clientsSocketList);
 }
 
-async function associateSocketOnAuction(newSession, fullData, socket) {
-    auctionsSocketList[fullData.data.id] = auctionsSocketList[fullData.data.id] || []
+async function associateSocketOnAuction(newSession, data, socket) {
 
-    const auctionVerify = await auctionService.verifyAuction(fullData.data.id);
+    const auctionVerify = await auctionService.verifyAuction(data);
     if (auctionVerify.error) {
-        delete auctionsSocketList[fullData.data.id]
+        if (data) delete auctionsSocketList[data.id]
         sendData(socket, {
-            data: fullData.data, token: newSession.token, message: auctionVerify.message, action: actions.auction.name,
+            data: data, token: newSession.token, message: auctionVerify.message, action: actions.auction.name,
             type: actions.auction.type.associateError
         });
         return;
     }
-    auctionsSocketList[fullData.data.id].push(socket)
-    clientsSocketList = removeSocketIfIsInList(clientsSocketList, socket);
-    clientsSocketListWaitingAuth = removeSocketIfIsInList(clientsSocketListWaitingAuth, socket);
-    console.log(`WaitingAuthSocketList: ${clientsSocketListWaitingAuth.length}`)
-    console.log(`LoggedSocketList: ${clientsSocketList.length}`)
-    console.log(`AuctionSocketList: ${auctionsSocketList[fullData.data.id].length}`)
+    removeSocketIfNecessary(socket, data);
 
-    const refreshedAuction = await auctionService.getCurrentAuctionStatus(fullData.data.id, auctionsSocketList[fullData.data.id].length,
+    const refreshedAuction = await auctionService.getCurrentAuctionStatus(data.id, auctionsSocketList[data.id].length,
         minimumNumberOfParticipants);
 
+    sendMessagesIfSucessfully(socket, newSession, refreshedAuction, data);
+}
+
+function sendMessagesIfSucessfully(socket, newSession, refreshedAuction, { id }) {
     sendData(socket, {
         data: { auction: refreshedAuction }, token: newSession.token, action: actions.auction.name,
         type: actions.auction.type.associateSuccess
@@ -238,7 +237,14 @@ async function associateSocketOnAuction(newSession, fullData, socket) {
     multicast({
         data: { user: newSession.user, auction: refreshedAuction }, action: actions.notification.name,
         type: actions.notification.type.newUser
-    }, auctionsSocketList[fullData.data.id]);
+    }, auctionsSocketList[id]);
+}
+
+function removeSocketIfNecessary(socket, { id }) {
+    auctionsSocketList[id] = auctionsSocketList[id] || []
+    auctionsSocketList[id].push(socket)
+    clientsSocketList = removeSocketIfIsInList(clientsSocketList, socket);
+    clientsSocketListWaitingAuth = removeSocketIfIsInList(clientsSocketListWaitingAuth, socket);
 }
 
 function clearConsole() {
@@ -283,19 +289,18 @@ function onConnectionEvent(server, ) {
 function onEndEvent(server) {
     server.on('end', (socket) => {
         console.log('END')
-        console.log(messages.endMessage);
+        console.log(messages.server.endMessage);
     });
 }
 
 function onErrorEvent(server) {
     server.on('error', (err) => {
         console.log(err);
-        console.log(messages.errorMessage);
+        console.log(messages.server.errorMessage);
     });
 }
 
 function multicast(message, socketList) {
-    console.log(socketList.length)
     socketList.forEach(function (client) {
         client.write(JSON.stringify(message));
     });
