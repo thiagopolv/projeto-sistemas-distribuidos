@@ -1,0 +1,17 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "server";
+
+message AuctionRequest {
+    string action = 1;
+    string data = 2;
+}
+
+message AuctionResponse {
+    string action = 1;
+    string data = 2;
+}
+
+service AuctionService {
+    rpc auction (AuctionRequest) returns (AuctionResponse);
+}
