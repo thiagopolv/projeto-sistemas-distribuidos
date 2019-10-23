@@ -1,0 +1,8 @@
+# Maven (examples)
+target
+
+# IntelliJ IDEA
+.idea
+*.iml
+*.ipr
+*.iws
