@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "owner": "Jhin",
+    "initialValue": 10.00,
+    "currentBid": null
+  },
+  {
+    "id": 2,
+    "owner": "Marth",
+    "initialValue": 5.00,
+    "currentBid": null
+  },
+  {
+    "id": 3,
+    "owner": "Nami",
+    "initialValue": 15.00,
+    "currentBid": null
+  }
+]
