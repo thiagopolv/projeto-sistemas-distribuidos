@@ -1,9 +1,9 @@
 [
   {
-    "id": 1,
-    "owner": "Jhin",
-    "initialValue": 10.00,
-    "currentBid": null
+  "id": 1,
+  "owner": "Jhin",
+  "initialValue": 10.00,
+  "currentBid": null
   },
   {
     "id": 2,
@@ -15,6 +15,12 @@
     "id": 3,
     "owner": "Nami",
     "initialValue": 15.00,
+    "currentBid": null
+  },
+  {
+    "id": 50,
+    "owner": null,
+    "initialValue": 50.00,
     "currentBid": null
   }
 ]

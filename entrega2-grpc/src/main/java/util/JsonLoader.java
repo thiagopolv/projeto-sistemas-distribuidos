@@ -1,6 +1,5 @@
 package util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import domain.Auction;
 import org.apache.commons.io.IOUtils;
@@ -62,11 +61,14 @@ public class JsonLoader {
             resourceName = folderPrefix + "/" + resourceName;
         }
 
-        InputStream ios = getClass().getClassLoader().getResourceAsStream(resourceName);
+        InputStream ios = new FileInputStream(resourceName);
+
         if (ios == null) {
             throw new FileNotFoundException(resourceName);
         }
+
         return IOUtils.toString(ios, StandardCharsets.UTF_8);
+
     }
 
     //TODO: Quebrado
@@ -76,8 +78,7 @@ public class JsonLoader {
             resourceName = folderPrefix + "/" + resourceName;
         }
 
-        objectMapper.writeValue(new File(getClass().getClassLoader().getResource(resourceName).getFile()), object);
-
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(resourceName), object);
     }
 
     private ObjectMapper getObjectMapper() {
@@ -85,19 +86,20 @@ public class JsonLoader {
     }
 
 
-    //TODO: Quebrado
     public static void main(String[] args) throws IOException {
 
-        JsonLoader jsonLoader = new JsonLoader("data");
+        JsonLoader jsonLoader = new JsonLoader("src/main/data");
 
-        List<Auction> list = jsonLoader.loadList("auctions.json", Auction.class);
+        List<Auction> list = new ArrayList<>(jsonLoader.loadList("auctions.json", Auction.class));
 
-        List<Auction> lists = new ArrayList(Arrays.asList(list));
+        Auction auction = Auction.build(100, null, 50.00);
 
-        Auction auction = Auction.build(50, null, 50.00);
+        list.add(auction);
 
-        lists.add(auction);
+        ObjectMapper om = new ObjectMapper();
 
-        jsonLoader.saveFile("auctionsss.json", lists);
+        jsonLoader.saveFile("auctions1.json", list);
+
+        System.out.println(list);
     }
 }
