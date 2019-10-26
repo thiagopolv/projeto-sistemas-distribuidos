@@ -12,6 +12,25 @@ message AuctionResponse {
     string data = 2;
 }
 
+message GetAuctionsRequest {
+
+}
+
+message Auction {
+    int32 id = 1;
+    string owner = 2;
+    double initialValue = 3;
+    double currentBid = 4;
+    string finishTime = 5;
+    string status = 6;
+}
+
+message GetAuctionsResponse {
+    repeated Auction auctions = 1;
+}
+
 service AuctionService {
     rpc auction (AuctionRequest) returns (AuctionResponse);
+    rpc getAuctionsService (GetAuctionsRequest) returns (GetAuctionsResponse);
 }
+

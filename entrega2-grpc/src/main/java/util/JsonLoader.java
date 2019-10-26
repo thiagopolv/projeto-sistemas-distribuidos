@@ -88,18 +88,18 @@ public class JsonLoader {
 
     public static void main(String[] args) throws IOException {
 
-        JsonLoader jsonLoader = new JsonLoader("src/main/data");
-
-        List<Auction> list = new ArrayList<>(jsonLoader.loadList("auctions.json", Auction.class));
-
-        Auction auction = Auction.build(100, null, 50.00);
-
-        list.add(auction);
-
-        ObjectMapper om = new ObjectMapper();
-
-        jsonLoader.saveFile("auctions1.json", list);
-
-        System.out.println(list);
+//        JsonLoader jsonLoader = new JsonLoader("src/main/data");
+//
+//        List<Auction> list = new ArrayList<>(jsonLoader.loadList("auctions.json", Auction.class));
+//
+//        Auction auction = Auction.build(100, null, 50.00);
+//
+//        list.add(auction);
+//
+//        ObjectMapper om = new ObjectMapper();
+//
+//        jsonLoader.saveFile("auctions1.json", list);
+//
+//        System.out.println(list);
     }
 }

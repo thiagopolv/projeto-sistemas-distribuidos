@@ -1,22 +1,24 @@
-package domain;
+package mapper;
 
 import static domain.AuctionStatus.GOING_ON;
 
 import java.time.LocalDateTime;
 
-public class Auction {
+import domain.AuctionStatus;
+
+public class AuctionData {
 
     private Integer id;
     private String owner;
     private Double initialValue;
     private Double currentBid;
-    private LocalDateTime finishTime;
+    private String finishTime;
     private AuctionStatus status;
 
-    public Auction() {
+    public AuctionData() {
     }
 
-    public Auction(Integer id, String owner, Double initialValue, Double currentBid, LocalDateTime finishTime) {
+    public AuctionData(Integer id, String owner, Double initialValue, Double currentBid, String finishTime) {
         this.id = id;
         this.owner = owner;
         this.initialValue = initialValue;
@@ -57,11 +59,11 @@ public class Auction {
         this.currentBid = currentBid;
     }
 
-    public LocalDateTime getFinishTime() {
+    public String getFinishTime() {
         return finishTime;
     }
 
-    public void setFinishTime(LocalDateTime finishTime) {
+    public void setFinishTime(String finishTime) {
         this.finishTime = finishTime;
     }
 
@@ -73,8 +75,8 @@ public class Auction {
         this.status = status;
     }
 
-    public static Auction build(Integer id, String owner, Double initialValue, LocalDateTime finishTime) {
-        return new Auction(id, owner, initialValue, null, finishTime);
+    public static AuctionData build(Integer id, String owner, Double initialValue, String finishTime) {
+        return new AuctionData(id, owner, initialValue, null, finishTime);
     }
 
     @Override
