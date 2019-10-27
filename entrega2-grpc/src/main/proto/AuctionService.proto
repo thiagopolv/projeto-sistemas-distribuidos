@@ -19,18 +19,30 @@ message GetAuctionsRequest {
 message Auction {
     int32 id = 1;
     string owner = 2;
-    double initialValue = 3;
-    double currentBid = 4;
-    string finishTime = 5;
-    string status = 6;
+    string product = 3;
+    double initialValue = 4;
+    double currentBid = 5;
+    string finishTime = 6;
+    string status = 7;
 }
 
 message GetAuctionsResponse {
     repeated Auction auctions = 1;
 }
 
+message SendBidRequest {
+    int32 id = 1;
+    double bid = 2;
+}
+
+message SendBidResponse {
+    bool success = 1;
+    repeated Auction auctions = 2;
+}
+
 service AuctionService {
     rpc auction (AuctionRequest) returns (AuctionResponse);
-    rpc getAuctionsService (GetAuctionsRequest) returns (GetAuctionsResponse);
+    rpc getAuctions (GetAuctionsRequest) returns (GetAuctionsResponse);
+    rpc sendBid (SendBidRequest) returns (SendBidResponse);
 }
 

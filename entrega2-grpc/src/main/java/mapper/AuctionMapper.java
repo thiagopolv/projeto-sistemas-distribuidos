@@ -20,7 +20,7 @@ public class AuctionMapper {
         return Auction.newBuilder()
                 .setId(auctionData.getId())
                 .setInitialValue(auctionData.getInitialValue())
-                .setCurrentBid(auctionData.getCurrentBid() != null ? auctionData.getCurrentBid() : 0)
+                .setCurrentBid(auctionData.getCurrentBid() != null ? auctionData.getCurrentBid() : 0.00)
                 .setOwner(auctionData.getOwner())
                 .setFinishTime(auctionData.getFinishTime())
                 .setStatus(LocalDateTime.parse(auctionData.getFinishTime()).isAfter(now) ? GOING_ON  : FINISHED)
