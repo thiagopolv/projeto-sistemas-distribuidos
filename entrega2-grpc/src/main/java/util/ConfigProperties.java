@@ -1,9 +1,7 @@
 package util;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
 
 public class ConfigProperties extends Properties {
@@ -38,5 +36,9 @@ public class ConfigProperties extends Properties {
 
     public static Integer getServerPort() {
         return Integer.parseInt(getProperties().getProperty("server.port"));
+    }
+
+    public static Integer getNumberOfServers() {
+        return Integer.parseInt(getProperties().getProperty("number.of.servers"));
     }
 }
