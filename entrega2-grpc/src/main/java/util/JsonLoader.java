@@ -1,14 +1,12 @@
 package util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import domain.Auction;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -90,7 +88,7 @@ public class JsonLoader {
 
 //        JsonLoader jsonLoader = new JsonLoader("src/main/data");
 //
-//        List<Auction> list = new ArrayList<>(jsonLoader.loadList("auctions.json", Auction.class));
+//        List<Auction> list = new ArrayList<>(jsonLoader.loadList("auctions0.json", Auction.class));
 //
 //        Auction auction = Auction.build(100, null, 50.00);
 //

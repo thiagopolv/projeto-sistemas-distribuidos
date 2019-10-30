@@ -2,7 +2,7 @@ package server;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
-import static java.util.Collections.EMPTY_LIST;
+import static util.ConfigProperties.getServerPort;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,9 +12,14 @@ import java.util.stream.Collectors;
 import io.grpc.stub.StreamObserver;
 import mapper.AuctionData;
 import mapper.AuctionMapper;
+import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import server.AuctionServiceGrpc.AuctionServiceImplBase;
+import util.ConfigProperties;
 import util.JsonLoader;
 
-public class AuctionServiceImpl extends AuctionServiceGrpc.AuctionServiceImplBase {
+public class AuctionServiceImpl extends AuctionServiceImplBase {
+
+    private static Integer SERVER_PORT = getServerPort();
 
     @Override
     public void auction(AuctionRequest auctionRequest, StreamObserver<AuctionResponse> responseObserver) {
@@ -34,7 +39,7 @@ public class AuctionServiceImpl extends AuctionServiceGrpc.AuctionServiceImplBas
 
         AuctionMapper mapper = new AuctionMapper();
 
-        List<AuctionData> auctionsData = loadAuctions();
+        List<AuctionData> auctionsData = loadAuctions(getAuctionsRequest.getPort());
 
         List<Auction> auctions = mapper.auctionListFromAuctionDataList(auctionsData);
 
@@ -52,7 +57,7 @@ public class AuctionServiceImpl extends AuctionServiceGrpc.AuctionServiceImplBas
 
         AuctionMapper mapper = new AuctionMapper();
 
-        List<AuctionData> auctionsData = loadAuctions();
+        List<AuctionData> auctionsData = loadAuctions(getServerPort());
         AuctionData auctionToChange = getAuctionById(auctionsData, sendBidRequest.getId());
         auctionToChange.setCurrentBid(verifyBid(auctionToChange.getCurrentBid(), sendBidRequest.getBid()));
 
@@ -97,17 +102,19 @@ public class AuctionServiceImpl extends AuctionServiceGrpc.AuctionServiceImplBas
                 .build();
     }
 
-    private List<AuctionData> loadAuctions() {
+    private List<AuctionData> loadAuctions(Integer port) {
         JsonLoader jsonLoader = new JsonLoader("src/main/data");
+        ArrayList<AuctionData> auctionsList = new ArrayList<>();
+        List<AuctionServiceBlockingStub> stubs = new ArrayList<>();
 
-        return new ArrayList<AuctionData>(jsonLoader.loadList("auctions.json",
+        return new ArrayList<AuctionData>(jsonLoader.loadList("auctions" + (port - SERVER_PORT) +".json",
                 AuctionData.class));
     }
 
     private void saveAuctions(List<AuctionData> auctionsToSave) throws IOException {
         JsonLoader jsonLoader = new JsonLoader("src/main/data");
 
-        jsonLoader.saveFile("auctions.json", auctionsToSave);
+        jsonLoader.saveFile("auctions0.json", auctionsToSave);
     }
 
     private AuctionData getAuctionById(List<AuctionData> list, Integer id) {
@@ -126,27 +133,33 @@ public class AuctionServiceImpl extends AuctionServiceGrpc.AuctionServiceImplBas
         return currentBid.equals(newBid);
     }
 
+    private List<AuctionServiceBlockingStub> buildStubs() {
+
+        AuctionServer auctionServer = new AuctionServer();
+
+        return auctionServer.buildStubs();
+    }
+
     public static void main(String[] args) {
         AuctionServiceImpl auctionService = new AuctionServiceImpl();
 
-        auctionService.sendBid(SendBidRequest.newBuilder()
-                        .setId(1)
-                        .setBid(10.0)
-                        .build(), new StreamObserver<SendBidResponse>() {
-            @Override
-            public void onNext(SendBidResponse sendBidResponse) {
+        auctionService.getAuctions(GetAuctionsRequest.newBuilder().setPort(50000).build()
 
-            }
+                        , new StreamObserver<GetAuctionsResponse>() {
+                    @Override
+                    public void onNext(GetAuctionsResponse getAuctionsResponse) {
 
-            @Override
-            public void onError(Throwable throwable) {
+                    }
 
-            }
+                    @Override
+                    public void onError(Throwable throwable) {
 
-            @Override
-            public void onCompleted() {
+                    }
 
-            }
-        });
+                    @Override
+                    public void onCompleted() {
+
+                    }
+                });
     }
 }

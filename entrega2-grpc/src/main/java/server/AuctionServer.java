@@ -1,13 +1,13 @@
 package server;
 
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import util.ConfigProperties;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static server.AuctionServiceGrpc.newBlockingStub;
@@ -34,14 +34,26 @@ public class AuctionServer {
         this.serversInfo = serversInfo;
     }
 
-    private BidiMap<Server, ServerInfo> buildServers() {
+    public List<AuctionServiceBlockingStub> buildStubs() {
+
+        List<AuctionServiceBlockingStub> stubs = new ArrayList<>();
+
+        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
+            AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
+            stubs.add(stub);
+        }
+
+        return stubs;
+    }
+
+    public BidiMap<Server, ServerInfo> buildServers() {
 
         BidiMap<Server, ServerInfo> serversMap = new DualHashBidiMap<>();
 
         for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
 
-            Server server = buildAndStartAuctionserver(SERVER_PORT + i);
-            AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(getServerHost(), SERVER_PORT + i));
+            Server server = buildAndStartAuctionServer(SERVER_PORT + i);
+            AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
             serversMap.put(server, new ServerInfo(stub));
         }
 
@@ -58,7 +70,7 @@ public class AuctionServer {
         return newBlockingStub(channel);
     }
 
-    private Server buildAndStartAuctionserver(Integer port) {
+    private Server buildAndStartAuctionServer(Integer port) {
 
         Server server = ServerBuilder
                 .forPort(port)
@@ -66,27 +78,34 @@ public class AuctionServer {
 
         try {
             server.start();
-            server.awaitTermination();
+//            server.awaitTermination();
         } catch (IOException e) {
+            e.printStackTrace();
             System.out.println("Error starting server.");
             return null;
-        } catch (InterruptedException e) {
-            System.out.println("Error terminating server.");
-            return null;
+//        } catch (InterruptedException e) {
+//            System.out.println("Error terminating server.");
+//            return null;
         }
 
         return server;
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args)  {
 
-        ConfigProperties configProperties = ConfigProperties.getProperties();
+        AuctionServer auctionServer = new AuctionServer();
 
-        Server server = ServerBuilder
-                .forPort(getServerPort())
-                .addService(new AuctionServiceImpl()).build();
+        BidiMap<Server, ServerInfo> serversMap = auctionServer.buildServers();
 
-        server.start();
-        server.awaitTermination();
+        System.out.println(serversMap);
+
+//        ConfigProperties configProperties = ConfigProperties.getProperties();
+//
+//        Server server = ServerBuilder
+//                .forPort(getServerPort())
+//                .addService(new AuctionServiceImpl()).build();
+//
+//        server.start();
+//        server.awaitTermination();
     }
 }
