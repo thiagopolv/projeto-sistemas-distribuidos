@@ -1,0 +1,22 @@
+[ {
+  "id" : 7,
+  "owner" : "Jhin",
+  "initialValue" : 10.0,
+  "currentBid" : 16.0,
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : null
+}, {
+  "id" : 8,
+  "owner" : "Marth",
+  "initialValue" : 5.0,
+  "currentBid" : null,
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : null
+}, {
+  "id" : 9,
+  "owner" : "Nami",
+  "initialValue" : 15.0,
+  "currentBid" : null,
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : null
+} ]

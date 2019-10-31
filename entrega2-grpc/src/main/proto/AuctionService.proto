@@ -14,6 +14,7 @@ message AuctionResponse {
 
 message GetAuctionsRequest {
     int32 port = 1;
+    bool isServer = 2;
 }
 
 message Auction {

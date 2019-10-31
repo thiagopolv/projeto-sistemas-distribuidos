@@ -1,7 +1,11 @@
 package server;
 
+import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
+import static server.AuctionServiceGrpc.newBlockingStub;
+import static util.ConfigProperties.getNumberOfServers;
+import static util.ConfigProperties.getServerHost;
 import static util.ConfigProperties.getServerPort;
 
 import java.io.IOException;
@@ -9,17 +13,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+
+import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import mapper.AuctionData;
 import mapper.AuctionMapper;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
 import server.AuctionServiceGrpc.AuctionServiceImplBase;
-import util.ConfigProperties;
 import util.JsonLoader;
 
 public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     private static Integer SERVER_PORT = getServerPort();
+    private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
+    private static final String SERVER_HOST = getServerHost();
 
     @Override
     public void auction(AuctionRequest auctionRequest, StreamObserver<AuctionResponse> responseObserver) {
@@ -38,10 +47,20 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             StreamObserver<GetAuctionsResponse> responseObserver) {
 
         AuctionMapper mapper = new AuctionMapper();
+        //List<AuctionServiceBlockingStub> stubs = buildStubsMap(getAuctionsRequest.getPort());
 
         List<AuctionData> auctionsData = loadAuctions(getAuctionsRequest.getPort());
-
         List<Auction> auctions = mapper.auctionListFromAuctionDataList(auctionsData);
+
+        if(!getAuctionsRequest.getIsServer() ) {
+
+            BidiMap<Integer, AuctionServiceBlockingStub> serversStubs = buildStubsMap(getAuctionsRequest.getPort());
+            serversStubs.forEach((port, stub) -> {
+                GetAuctionsResponse response = stub.getAuctions(buildGetAuctionsRequest(port, TRUE));
+                auctions.addAll(response.getAuctionsList());
+            });
+        }
+
 
         System.out.println(auctions);
         GetAuctionsResponse getAuctionsResponse = GetAuctionsResponse.newBuilder()
@@ -50,6 +69,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         responseObserver.onNext(getAuctionsResponse);
         responseObserver.onCompleted();
+    }
+
+    private GetAuctionsRequest buildGetAuctionsRequest(Integer port, Boolean isServer) {
+        return GetAuctionsRequest.newBuilder().setPort(port).setIsServer(isServer).build();
     }
 
     @Override
@@ -133,17 +156,35 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return currentBid.equals(newBid);
     }
 
-    private List<AuctionServiceBlockingStub> buildStubs() {
+    private BidiMap<Integer, AuctionServiceBlockingStub> buildStubsMap(Integer port) {
 
-        AuctionServer auctionServer = new AuctionServer();
+        BidiMap<Integer, AuctionServiceBlockingStub> stubsMap = new DualHashBidiMap<>();
+        List<AuctionServiceBlockingStub> stubs = new ArrayList<>();
 
-        return auctionServer.buildStubs();
+        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
+            if(SERVER_PORT + i != port) {
+                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
+                stubsMap.put(SERVER_PORT + i, stub);
+            }
+        }
+
+        return stubsMap;
+    }
+
+    private AuctionServiceBlockingStub buildAuctionServerStub(ManagedChannel channel) {
+        return newBlockingStub(channel);
+    }
+
+    private ManagedChannel buildChannel(String host, Integer port) {
+        return forAddress(host, port)
+                .usePlaintext()
+                .build();
     }
 
     public static void main(String[] args) {
         AuctionServiceImpl auctionService = new AuctionServiceImpl();
 
-        auctionService.getAuctions(GetAuctionsRequest.newBuilder().setPort(50000).build()
+        auctionService.getAuctions(GetAuctionsRequest.newBuilder().setPort(50001).setIsServer(false).build()
 
                         , new StreamObserver<GetAuctionsResponse>() {
                     @Override
