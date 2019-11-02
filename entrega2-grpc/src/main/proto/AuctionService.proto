@@ -34,6 +34,8 @@ message GetAuctionsResponse {
 message SendBidRequest {
     int32 id = 1;
     double bid = 2;
+    bool isServer = 3;
+    int32 port = 4;
 }
 
 message SendBidResponse {
@@ -41,9 +43,18 @@ message SendBidResponse {
     repeated Auction auctions = 2;
 }
 
+message GetAuctionsIdsRequest {
+    int32 port = 1;
+}
+
+message GetAuctionsIdsResponse {
+    repeated int32 ids = 1;
+}
+
 service AuctionService {
     rpc auction (AuctionRequest) returns (AuctionResponse);
     rpc getAuctions (GetAuctionsRequest) returns (GetAuctionsResponse);
     rpc sendBid (SendBidRequest) returns (SendBidResponse);
+    rpc getAuctionsIds(GetAuctionsIdsRequest) returns (GetAuctionsIdsResponse);
 }
 
