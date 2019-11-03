@@ -46,15 +46,15 @@ public class AuctionServer {
         return stubs;
     }
 
-    public BidiMap<Server, ServerInfo> buildServers() throws IOException, InterruptedException {
+    public BidiMap<Server, AuctionServiceBlockingStub> buildServers() throws IOException, InterruptedException {
 
-        BidiMap<Server, ServerInfo> serversMap = new DualHashBidiMap<>();
+        BidiMap<Server, AuctionServiceBlockingStub> serversMap = new DualHashBidiMap<>();
 
         for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
 
             Server server = buildAndStartAuctionServer(SERVER_PORT + i);
             AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
-            serversMap.put(server, new ServerInfo(stub));
+            serversMap.put(server, stub);
         }
 
         return serversMap;
@@ -95,7 +95,7 @@ public class AuctionServer {
 
         AuctionServer auctionServer = new AuctionServer();
 
-        BidiMap<Server, ServerInfo> serversMap = auctionServer.buildServers();
+        BidiMap<Server, AuctionServiceBlockingStub> serversMap = auctionServer.buildServers();
 
         System.out.println(serversMap);
 

@@ -53,30 +53,36 @@ public class JsonLoader {
         }
     }
 
-    public String loadFile(String resourceName) throws IOException {
+    public String loadFile(String resourceName) {
 
-        if (!StringUtils.isEmpty(folderPrefix)) {
-            resourceName = folderPrefix + "/" + resourceName;
+        InputStream ios = null;
+        String ioReturn = "";
+        try {
+            if (!StringUtils.isEmpty(folderPrefix)) {
+                resourceName = folderPrefix + "/" + resourceName;
+            }
+
+            ios = new FileInputStream(resourceName);
+            ioReturn = IOUtils.toString(ios, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading file " + resourceName + " - " + e.getMessage());
         }
 
-        InputStream ios = new FileInputStream(resourceName);
-
-        if (ios == null) {
-            throw new FileNotFoundException(resourceName);
-        }
-
-        return IOUtils.toString(ios, StandardCharsets.UTF_8);
-
+        return ioReturn;
     }
 
     //TODO: Quebrado
-    public void saveFile(String resourceName, Object object) throws IOException {
+    public void saveFile(String resourceName, Object object) {
 
-        if (!StringUtils.isEmpty(folderPrefix)) {
-            resourceName = folderPrefix + "/" + resourceName;
+        try {
+            if (!StringUtils.isEmpty(folderPrefix)) {
+                resourceName = folderPrefix + "/" + resourceName;
+            }
+
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(resourceName), object);
+        } catch (IOException e) {
+            throw new RuntimeException("Error saving file " + resourceName + " - " + e.getMessage());
         }
-
-        objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(resourceName), object);
     }
 
     private ObjectMapper getObjectMapper() {

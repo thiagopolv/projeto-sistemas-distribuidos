@@ -41,4 +41,8 @@ public class ConfigProperties extends Properties {
     public static Integer getNumberOfServers() {
         return Integer.parseInt(getProperties().getProperty("number.of.servers"));
     }
+
+    public static Integer getSaveCopies() {
+        return Integer.parseInt(getProperties().getProperty("save.copies"));
+    }
 }

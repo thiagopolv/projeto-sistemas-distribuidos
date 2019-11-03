@@ -22,9 +22,14 @@ message Auction {
     string owner = 2;
     string product = 3;
     double initialValue = 4;
-    double currentBid = 5;
+    CurrentBidInfo currentBidInfo = 5;
     string finishTime = 6;
     string status = 7;
+}
+
+message CurrentBidInfo {
+    double value = 1;
+    string username = 2;
 }
 
 message GetAuctionsResponse {
@@ -36,11 +41,13 @@ message SendBidRequest {
     double bid = 2;
     bool isServer = 3;
     int32 port = 4;
+    string username = 5;
 }
 
 message SendBidResponse {
     bool success = 1;
-    repeated Auction auctions = 2;
+    repeated bool successes = 2;
+    repeated Auction auctions = 3;
 }
 
 message GetAuctionsIdsRequest {
@@ -51,10 +58,22 @@ message GetAuctionsIdsResponse {
     repeated int32 ids = 1;
 }
 
+message CreateAuctionRequest {
+    int32 port = 1;
+    Auction auction = 2;
+    bool isServer = 3;
+}
+
+message CreateAuctionResponse {
+    bool success = 1;
+    Auction auction = 2;
+}
+
 service AuctionService {
     rpc auction (AuctionRequest) returns (AuctionResponse);
     rpc getAuctions (GetAuctionsRequest) returns (GetAuctionsResponse);
     rpc sendBid (SendBidRequest) returns (SendBidResponse);
     rpc getAuctionsIds(GetAuctionsIdsRequest) returns (GetAuctionsIdsResponse);
+    rpc createAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
 }
 

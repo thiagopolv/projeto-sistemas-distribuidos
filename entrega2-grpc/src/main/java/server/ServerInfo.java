@@ -1,34 +1,30 @@
 package server;
 
-import java.util.ArrayList;
 import java.util.List;
-
-import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
 
 public class ServerInfo {
 
-    private AuctionServiceBlockingStub serverStub;
+    private Integer port;
     private List<Integer> idsInServer;
 
     public ServerInfo() {
     }
 
-    public ServerInfo(AuctionServiceBlockingStub serverStub) {
-        this.serverStub = serverStub;
-        this.idsInServer = new ArrayList<>();
-    }
-
-    public ServerInfo(AuctionServiceBlockingStub serverStub, List<Integer> idsInServer) {
-        this.serverStub = serverStub;
+    public ServerInfo(List<Integer> idsInServer) {
         this.idsInServer = idsInServer;
     }
 
-    public AuctionServiceBlockingStub getServerStub() {
-        return serverStub;
+    public ServerInfo(Integer port, List<Integer> idsInServer) {
+        this.port = port;
+        this.idsInServer = idsInServer;
     }
 
-    public void setServerStub(AuctionServiceBlockingStub serverStub) {
-        this.serverStub = serverStub;
+    public Integer getPort() {
+        return port;
+    }
+
+    public void setPort(Integer port) {
+        this.port = port;
     }
 
     public List<Integer> getIdsInServer() {
@@ -42,7 +38,7 @@ public class ServerInfo {
     @Override
     public String toString() {
         return "ServerInfo{" +
-                "serverStub=" + serverStub +
+                "port=" + port +
                 ", idsInServer=" + idsInServer +
                 '}';
     }

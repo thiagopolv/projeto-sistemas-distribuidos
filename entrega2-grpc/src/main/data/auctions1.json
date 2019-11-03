@@ -1,22 +1,67 @@
 [ {
-  "id" : 4,
-  "owner" : "Jhin",
-  "initialValue" : 10.0,
-  "currentBid" : 16.0,
+  "id" : 3,
+  "owner" : "Nami",
+  "product" : "staff",
+  "initialValue" : 15.0,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
   "finishTime" : "2019-11-26T09:19:06.706",
-  "status" : null
+  "status" : "GOING_ON"
+}, {
+  "id" : 4,
+  "owner" : "Ness",
+  "product" : "bat",
+  "initialValue" : 10.0,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
 }, {
   "id" : 5,
-  "owner" : "Marth",
+  "owner" : "Cloud",
+  "product" : "cloak",
   "initialValue" : 5.0,
-  "currentBid" : null,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
   "finishTime" : "2019-11-26T09:19:06.706",
-  "status" : null
+  "status" : "GOING_ON"
 }, {
   "id" : 6,
-  "owner" : "Nami",
+  "owner" : "Snake",
+  "product" : "boots",
   "initialValue" : 15.0,
-  "currentBid" : null,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
   "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
+  "id" : 11,
+  "owner" : "tester",
+  "product" : "pen",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 5.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-03T17:41:09.446",
+  "status" : null
+}, {
+  "id" : 12,
+  "owner" : "tester",
+  "product" : "pen",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 5.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-03T17:43:40.430",
   "status" : null
 } ]

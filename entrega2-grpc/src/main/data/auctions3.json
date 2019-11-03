@@ -1,4 +1,26 @@
 [ {
+  "id" : 7,
+  "owner" : "Jayce",
+  "product" : "hammer",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
+  "id" : 8,
+  "owner" : "Lucian",
+  "product" : "lantern",
+  "initialValue" : 15.0,
+  "currentBidInfo" : {
+    "value" : 21.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
   "id" : 1,
   "owner" : "Jhin",
   "product" : "piano",
@@ -21,29 +43,7 @@
   "finishTime" : "2019-11-26T09:19:06.706",
   "status" : "GOING_ON"
 }, {
-  "id" : 3,
-  "owner" : "Nami",
-  "product" : "staff",
-  "initialValue" : 15.0,
-  "currentBidInfo" : {
-    "value" : 20.0,
-    "username" : "someone"
-  },
-  "finishTime" : "2019-11-26T09:19:06.706",
-  "status" : "GOING_ON"
-}, {
-  "id" : 4,
-  "owner" : "Ness",
-  "product" : "bat",
-  "initialValue" : 10.0,
-  "currentBidInfo" : {
-    "value" : 20.0,
-    "username" : "someone"
-  },
-  "finishTime" : "2019-11-26T09:19:06.706",
-  "status" : "GOING_ON"
-}, {
-  "id" : 11,
+  "id" : 13,
   "owner" : "tester",
   "product" : "pen",
   "initialValue" : 5.0,
@@ -51,6 +51,6 @@
     "value" : 5.0,
     "username" : ""
   },
-  "finishTime" : "2019-11-03T17:40:15.334",
+  "finishTime" : "2019-11-03T17:45:20.312",
   "status" : null
 } ]
