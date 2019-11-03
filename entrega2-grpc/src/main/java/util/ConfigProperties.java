@@ -45,4 +45,9 @@ public class ConfigProperties extends Properties {
     public static Integer getSaveCopies() {
         return Integer.parseInt(getProperties().getProperty("save.copies"));
     }
+
+    public static Integer getDaysToExpireAuction() {
+        return Integer.parseInt(getProperties().getProperty("days.to.finish.auction"));
+
+    }
 }

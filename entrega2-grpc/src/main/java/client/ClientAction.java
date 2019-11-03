@@ -9,8 +9,8 @@ import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 public enum ClientAction {
     LIST("LIST"),
     SEND_BID("SEND"),
-    REFRESH("REF"),
-    DISCONNECT("DIS"),
+    DISCONNECT("DISC"),
+    CREATE("CREATE"),
     INVALID("");
 
     private String action;
@@ -27,8 +27,8 @@ public enum ClientAction {
         BidiMap<ClientAction, String> enumMap = new DualHashBidiMap<>();
         enumMap.put(LIST, "LIST");
         enumMap.put(SEND_BID, "SEND");
-        enumMap.put(REFRESH, "REF");
-        enumMap.put(DISCONNECT, "DIS");
+        enumMap.put(DISCONNECT, "DISC");
+        enumMap.put(CREATE, "CREATE");
         enumMap.put(INVALID, "");
 
         return enumMap;

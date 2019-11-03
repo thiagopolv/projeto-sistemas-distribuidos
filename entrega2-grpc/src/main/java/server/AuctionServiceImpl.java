@@ -100,7 +100,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             stubsIdsMap.forEach((stub, ids) -> {
                 if (ids.getIdsInServer().contains(sendBidRequest.getId())) {
                     SendBidResponse response = stub.sendBid(buildSendBidRequest(ids.getPort(), sendBidRequest.getBid(),
-                            sendBidRequest.getId()));
+                            sendBidRequest.getId(), sendBidRequest.getUsername()));
                     successes.add(response.getSuccess());
                 }
             });
@@ -215,11 +215,12 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return !successes.contains(FALSE);
     }
 
-    private SendBidRequest buildSendBidRequest(Integer port, Double bid, Integer id) {
+    private SendBidRequest buildSendBidRequest(Integer port, Double bid, Integer id, String username) {
         return SendBidRequest.newBuilder()
                 .setPort(port)
                 .setBid(bid)
                 .setId(id)
+                .setUsername(username)
                 .setIsServer(TRUE)
                 .build();
     }
@@ -314,7 +315,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         BidiMap<Integer, AuctionServiceBlockingStub> savingStubsMap = new DualHashBidiMap<>();
 
         for (int i = 1; i < SAVE_COPIES; i++) {
-            if (port + i > SERVER_PORT + NUMBER_OF_SERVERS) {
+            if (port + i >= SERVER_PORT + NUMBER_OF_SERVERS) {
                 AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
                 savingStubsMap.put(SERVER_PORT, stub);
             } else {

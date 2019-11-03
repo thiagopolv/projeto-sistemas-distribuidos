@@ -43,14 +43,14 @@
   "finishTime" : "2019-11-26T09:19:06.706",
   "status" : "GOING_ON"
 }, {
-  "id" : 11,
-  "owner" : "tester",
-  "product" : "pen",
-  "initialValue" : 5.0,
+  "id" : 23,
+  "owner" : "ser1",
+  "product" : "car",
+  "initialValue" : 300.0,
   "currentBidInfo" : {
-    "value" : 5.0,
-    "username" : ""
+    "value" : 302.0,
+    "username" : "ser1"
   },
-  "finishTime" : "2019-11-03T17:40:15.334",
+  "finishTime" : "2019-11-08T19:13:01.029",
   "status" : null
 } ]

@@ -4,8 +4,8 @@
   "product" : "hammer",
   "initialValue" : 5.0,
   "currentBidInfo" : {
-    "value" : 20.0,
-    "username" : "someone"
+    "value" : 21.0,
+    "username" : "user"
   },
   "finishTime" : "2019-11-26T09:19:06.706",
   "status" : "GOING_ON"
@@ -15,8 +15,8 @@
   "product" : "lantern",
   "initialValue" : 15.0,
   "currentBidInfo" : {
-    "value" : 21.0,
-    "username" : ""
+    "value" : 22.0,
+    "username" : "usr"
   },
   "finishTime" : "2019-11-26T09:19:06.706",
   "status" : "GOING_ON"
@@ -43,14 +43,25 @@
   "finishTime" : "2019-11-26T09:19:06.706",
   "status" : "GOING_ON"
 }, {
-  "id" : 13,
-  "owner" : "tester",
-  "product" : "pen",
-  "initialValue" : 5.0,
+  "id" : 23,
+  "owner" : "ser1",
+  "product" : "car",
+  "initialValue" : 300.0,
   "currentBidInfo" : {
-    "value" : 5.0,
+    "value" : 302.0,
+    "username" : "ser1"
+  },
+  "finishTime" : "2019-11-08T19:13:01.029",
+  "status" : null
+}, {
+  "id" : 24,
+  "owner" : "user3",
+  "product" : "motorcycle",
+  "initialValue" : 100.0,
+  "currentBidInfo" : {
+    "value" : 100.0,
     "username" : ""
   },
-  "finishTime" : "2019-11-03T17:45:20.312",
+  "finishTime" : "2019-11-08T19:15:10.508",
   "status" : null
 } ]

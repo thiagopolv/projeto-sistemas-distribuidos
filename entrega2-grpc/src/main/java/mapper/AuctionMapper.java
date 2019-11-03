@@ -39,7 +39,7 @@ public class AuctionMapper {
 
         auctionData.setId(auction.getId());
         auctionData.setCurrentBidInfo(buildCurrentBidInfo(auction));
-        auctionData.setFinishTime(now.toString());
+        auctionData.setFinishTime(auction.getFinishTime());
         auctionData.setInitialValue(auction.getInitialValue());
         auctionData.setOwner(auction.getOwner());
         auctionData.setStatus(null);
