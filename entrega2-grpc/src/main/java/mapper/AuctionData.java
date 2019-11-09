@@ -10,21 +10,24 @@ public class AuctionData {
 
     private Integer id;
     private String owner;
+    private String product;
     private Double initialValue;
-    private Double currentBid;
+    private CurrentBidInfo currentBidInfo;
     private String finishTime;
     private AuctionStatus status;
 
     public AuctionData() {
     }
 
-    public AuctionData(Integer id, String owner, Double initialValue, Double currentBid, String finishTime) {
+    public AuctionData(Integer id, String owner, String product, Double initialValue, CurrentBidInfo currentBidInfo,
+            String finishTime, AuctionStatus status) {
         this.id = id;
         this.owner = owner;
+        this.product = product;
         this.initialValue = initialValue;
-        this.currentBid = currentBid;
+        this.currentBidInfo = currentBidInfo;
         this.finishTime = finishTime;
-        this.status = GOING_ON;
+        this.status = status;
     }
 
     public Integer getId() {
@@ -51,12 +54,20 @@ public class AuctionData {
         this.initialValue = initialValue;
     }
 
-    public Double getCurrentBid() {
-        return currentBid;
+    public String getProduct() {
+        return product;
     }
 
-    public void setCurrentBid(Double currentBid) {
-        this.currentBid = currentBid;
+    public void setProduct(String product) {
+        this.product = product;
+    }
+
+    public CurrentBidInfo getCurrentBidInfo() {
+        return currentBidInfo;
+    }
+
+    public void setCurrentBidInfo(CurrentBidInfo currentBidInfo) {
+        this.currentBidInfo = currentBidInfo;
     }
 
     public String getFinishTime() {
@@ -75,18 +86,17 @@ public class AuctionData {
         this.status = status;
     }
 
-    public static AuctionData build(Integer id, String owner, Double initialValue, String finishTime) {
-        return new AuctionData(id, owner, initialValue, null, finishTime);
-    }
+
 
     @Override
     public String toString() {
-        return "Auction{" +
+        return "AuctionData{" +
                 "id=" + id +
                 ", owner='" + owner + '\'' +
+                ", product='" + product + '\'' +
                 ", initialValue=" + initialValue +
-                ", currentBid=" + currentBid +
-                ", finishTime=" + finishTime +
+                ", currentBidInfo=" + currentBidInfo +
+                ", finishTime='" + finishTime + '\'' +
                 ", status=" + status +
                 '}';
     }

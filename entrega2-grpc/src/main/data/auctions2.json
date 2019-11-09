@@ -1,0 +1,67 @@
+[ {
+  "id" : 5,
+  "owner" : "Cloud",
+  "product" : "cloak",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
+  "id" : 6,
+  "owner" : "Snake",
+  "product" : "boots",
+  "initialValue" : 15.0,
+  "currentBidInfo" : {
+    "value" : 20.0,
+    "username" : "someone"
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
+  "id" : 7,
+  "owner" : "Jayce",
+  "product" : "hammer",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 21.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
+  "id" : 8,
+  "owner" : "Lucian",
+  "product" : "lantern",
+  "initialValue" : 15.0,
+  "currentBidInfo" : {
+    "value" : 22.0,
+    "username" : "usr"
+  },
+  "finishTime" : "2019-11-26T09:19:06.706",
+  "status" : "GOING_ON"
+}, {
+  "id" : 22,
+  "owner" : "usr",
+  "product" : "trophee",
+  "initialValue" : 50.0,
+  "currentBidInfo" : {
+    "value" : 51.0,
+    "username" : "ser1"
+  },
+  "finishTime" : "2019-11-08T18:52:04.386",
+  "status" : null
+}, {
+  "id" : 24,
+  "owner" : "user3",
+  "product" : "motorcycle",
+  "initialValue" : 100.0,
+  "currentBidInfo" : {
+    "value" : 100.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-08T19:15:10.508",
+  "status" : null
+} ]
