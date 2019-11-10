@@ -1,10 +1,12 @@
 package server;
 
+import static domain.LogFunctions.CREATE_AUCTION;
 import static domain.LogFunctions.SEND_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.*;
 
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import domain.CreateAuctionLog;
 import domain.Log;
 import domain.LogFunctions;
 import org.apache.commons.collections4.BidiMap;
@@ -98,7 +101,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap;
 
         List<AuctionData> auctionsData = loadAuctions(sendBidRequest.getPort());
-        saveLogs(SEND_BID, sendBidRequest, sendBidRequest.getPort(), auctionsData);
+        saveLogs(SEND_BID, sendBidRequest, sendBidRequest.getPort(), auctionsData, sendBidRequest.getIsServer());
         successes.add(updateBidIfPresentLocally(auctionsData, sendBidRequest.getId(), sendBidRequest.getBid(),
                 sendBidRequest.getPort(), sendBidRequest.getUsername()));
 
@@ -127,6 +130,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                               StreamObserver<CreateAuctionResponse> responseObserver) {
         AuctionMapper auctionMapper = new AuctionMapper();
         List<Boolean> successes = new ArrayList<>();
+        saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper),
+                createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer());
 
         Auction auction = createAuctionRequest.getAuction();
         AuctionData auctionToSave = auctionMapper.auctionDataFromAuction(auction);
@@ -205,6 +210,21 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
+    private CreateAuctionRequest buildCreateAuctionRequest(CreateAuctionRequest createAuctionRequest) {
+        return CreateAuctionRequest.newBuilder()
+                .setPort(createAuctionRequest.getPort())
+                .setAuction(createAuctionRequest.getAuction())
+                .build();
+    }
+
+    private CreateAuctionLog buildCreateAuctionLog(CreateAuctionRequest createAuctionRequest, AuctionMapper auctionMapper) {
+        CreateAuctionLog log = new CreateAuctionLog();
+        log.setAuction(auctionMapper.auctionDataFromAuction(createAuctionRequest.getAuction()));
+        log.setPort(createAuctionRequest.getPort());
+        log.setServer(createAuctionRequest.getIsServer());
+
+        return log;
+    }
 
     private boolean isSuccessfulUpdate(List<Boolean> successes) {
         return notContainsAnyFalse(successes) && !isNullElementsList(successes);
@@ -268,10 +288,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     private List<AuctionData> loadAuctions(Integer port) {
         JsonLoader jsonLoader = new JsonLoader("src/main/data");
-        ArrayList<AuctionData> auctionsList = new ArrayList<>();
-        List<AuctionServiceBlockingStub> stubs = new ArrayList<>();
-
-        return new ArrayList<AuctionData>(jsonLoader.loadList("auctions" + (port - SERVER_PORT) + ".json",
+        return new ArrayList<>(jsonLoader.loadList("auctions" + (port - SERVER_PORT) + ".json",
                 AuctionData.class));
     }
 
@@ -295,41 +312,58 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, port - SERVER_PORT), auctionsToSave);
     }
 
-    private void saveLogs(LogFunctions function, Object request, Integer port, Object data) {
+    private void saveLogs(LogFunctions function, Object request, Integer port, Object data, Boolean isServer) {
+        if(isServer) {
+            return;
+        }
+
         JsonLoader jsonLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN, SERVER_PORT - port));
 
-        NextId nextId = loadLogNextId(NEXT_ID_FILE, jsonLoader);
-        List<Log> logs = loadLogs(nextId.getId(), jsonLoader);
+        NextId nextLogId = loadLogNextId(NEXT_LOG_FILE, jsonLoader);
+        List<Log> logs = loadLogs(nextLogId.getId(), jsonLoader);
 
         validateIfNeedsToClearLogs(logs);
-
         logs.add(new Log(function, request));
+        jsonLoader.saveFile(format(LOGS_FILE_NAME_PATTERN, nextLogId.getId()), logs);
 
-        validateIfNeedsToAlternateLogFileAndCreateSnapshot(jsonLoader, nextId, logs, data);
+        validateIfNeedsToAlternateLogFileAndCreateSnapshot(jsonLoader, nextLogId, logs, data, port);
     }
 
-    private void validateIfNeedsToAlternateLogFileAndCreateSnapshot(JsonLoader jsonLoader, NextId nextId, List<Log> logs, Object data) {
+    private void validateIfNeedsToAlternateLogFileAndCreateSnapshot(JsonLoader jsonLoader, NextId nextLogId,
+            List<Log> logs, Object data, Integer port) {
 
         if(logFileIsFull(logs)) {
-            alternateLogFile(jsonLoader, nextId);
-            createSnapshot(jsonLoader, data, nextId);
+            data = loadDataFromDBIfNecessary(data, port);
+            alternateLogFile(jsonLoader, nextLogId);
+            createSnapshot(jsonLoader, data);
         }
     }
 
-    private void createSnapshot(JsonLoader jsonLoader, Object data, NextId nextId) {
-        jsonLoader.saveFile(format(SNAPSHOT_FILE_NAME_FORMAT, nextId.getId()), data);
-        jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextId);
+    private Object loadDataFromDBIfNecessary(Object data, Integer port) {
+        if(isNull(data)) {
+            data = loadAuctions(port);
+        }
+        return data;
     }
 
-    private void alternateLogFile(JsonLoader jsonLoader, NextId nextId) {
+    private void createSnapshot(JsonLoader jsonLoader, Object data) {
+        NextId nextSnapshotId = loadLogNextId(NEXT_SNAPSHOT_FILE, jsonLoader);
+        jsonLoader.saveFile(format(SNAPSHOT_FILE_NAME_FORMAT, nextSnapshotId.getId()), data);
+        setLogsAndSnapshotsNextId(nextSnapshotId);
+        jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextSnapshotId);
+    }
 
+    private void alternateLogFile(JsonLoader jsonLoader, NextId nextLogId) {
+        setLogsAndSnapshotsNextId(nextLogId);
+        jsonLoader.saveFile(NEXT_LOG_FILE, nextLogId);
+    }
+
+    private void setLogsAndSnapshotsNextId(NextId nextId) {
         if (nextId.getId().equals(NUMBER_OF_LOGS)) {
             nextId.setId(0);
         } else {
             nextId.setId(nextId.getId() + 1);
         }
-
-        jsonLoader.saveFile(NEXT_ID_FILE, nextId);
     }
 
     private void validateIfNeedsToClearLogs(List<Log> logs) {
@@ -343,7 +377,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private List<Log> loadLogs(Integer id, JsonLoader jsonLoader) {
-        return new ArrayList<Log>(jsonLoader.loadList(format(LOGS_FILE_NAME_PATTERN, id - SERVER_PORT),
+        return new ArrayList<>(jsonLoader.loadList(format(LOGS_FILE_NAME_PATTERN, id),
                 Log.class));
     }
 
@@ -457,7 +491,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                                 .setProduct("pen")
                                 .build())
                         .setIsServer(FALSE)
-                        .setPort(50002)
+                        .setPort(50000)
                         .build(),
                 new StreamObserver<CreateAuctionResponse>() {
                     @Override
