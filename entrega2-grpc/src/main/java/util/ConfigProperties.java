@@ -48,6 +48,14 @@ public class ConfigProperties extends Properties {
 
     public static Integer getDaysToExpireAuction() {
         return Integer.parseInt(getProperties().getProperty("days.to.finish.auction"));
+    }
 
+    public static Integer getNumberOfLogs() {
+        return Integer.parseInt(getProperties().getProperty("number.of.logs"));
+    }
+
+    public static Integer getLogSize() {
+        return Integer.parseInt(getProperties().getProperty("log.size"));
     }
 }
+
