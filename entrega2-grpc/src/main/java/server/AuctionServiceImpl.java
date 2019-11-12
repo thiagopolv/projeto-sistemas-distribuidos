@@ -217,14 +217,15 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
-    private CreateAuctionLog buildCreateAuctionLog(CreateAuctionRequest createAuctionRequest,
+    private LogData buildCreateAuctionLog(CreateAuctionRequest createAuctionRequest,
             AuctionMapper auctionMapper) {
-        CreateAuctionLog log = new CreateAuctionLog();
-        log.setAuction(auctionMapper.auctionDataFromAuction(createAuctionRequest.getAuction()));
-        log.setPort(createAuctionRequest.getPort());
-        log.setServer(createAuctionRequest.getIsServer());
+        CreateAuctionLog createLog = new CreateAuctionLog();
 
-        return log;
+        createLog.setAuction(auctionMapper.auctionDataFromAuction(createAuctionRequest.getAuction()));
+        createLog.setPort(createAuctionRequest.getPort());
+        createLog.setServer(createAuctionRequest.getIsServer());
+
+        return new LogData(createLog);
     }
 
     private boolean isSuccessfulUpdate(List<Boolean> successes) {

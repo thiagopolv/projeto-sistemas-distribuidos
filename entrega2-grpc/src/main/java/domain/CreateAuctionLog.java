@@ -2,7 +2,7 @@ package domain;
 
 import mapper.AuctionData;
 
-public class CreateAuctionLog extends LogData {
+public class CreateAuctionLog {
 
     private Integer port;
     private AuctionData auction;

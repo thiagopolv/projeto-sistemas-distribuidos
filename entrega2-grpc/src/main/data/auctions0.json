@@ -75,4 +75,26 @@
   },
   "finishTime" : "2019-11-10T19:00:02.889",
   "status" : null
+}, {
+  "id" : 39,
+  "owner" : "tester",
+  "product" : "pen",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 5.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-12T14:18:42.447",
+  "status" : null
+}, {
+  "id" : 40,
+  "owner" : "tester",
+  "product" : "pen",
+  "initialValue" : 5.0,
+  "currentBidInfo" : {
+    "value" : 5.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-11-12T14:20:46.142",
+  "status" : null
 } ]

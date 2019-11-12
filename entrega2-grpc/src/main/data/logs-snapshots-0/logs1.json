@@ -1,19 +1,43 @@
 [ {
   "function" : "CREATE_AUCTION",
   "logData" : {
-    "port" : 50000,
-    "auction" : {
-      "id" : 0,
-      "owner" : "tester",
-      "product" : "pen",
-      "initialValue" : 5.0,
-      "currentBidInfo" : {
-        "value" : 5.0,
-        "username" : ""
+    "createAuctionData" : {
+      "port" : 50000,
+      "auction" : {
+        "id" : 0,
+        "owner" : "tester",
+        "product" : "pen",
+        "initialValue" : 5.0,
+        "currentBidInfo" : {
+          "value" : 5.0,
+          "username" : ""
+        },
+        "finishTime" : "2019-11-12T14:18:42.447",
+        "status" : null
       },
-      "finishTime" : "2019-11-10T19:13:25.188",
-      "status" : null
+      "server" : false
     },
-    "server" : false
+    "sendBidData" : null
+  }
+}, {
+  "function" : "CREATE_AUCTION",
+  "logData" : {
+    "createAuctionData" : {
+      "port" : 50000,
+      "auction" : {
+        "id" : 0,
+        "owner" : "tester",
+        "product" : "pen",
+        "initialValue" : 5.0,
+        "currentBidInfo" : {
+          "value" : 5.0,
+          "username" : ""
+        },
+        "finishTime" : "2019-11-12T14:20:46.142",
+        "status" : null
+      },
+      "server" : false
+    },
+    "sendBidData" : null
   }
 } ]

@@ -21,7 +21,7 @@ public class Log {
         this.function = function;
     }
 
-    public Object getLogData() {
+    public LogData getLogData() {
         return logData;
     }
 

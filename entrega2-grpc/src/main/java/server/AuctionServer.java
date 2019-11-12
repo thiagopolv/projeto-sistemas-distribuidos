@@ -139,12 +139,10 @@ public class AuctionServer {
 
         AuctionMapper auctionMapper = new AuctionMapper();
 
-        CreateAuctionLog createAuctionLog = (CreateAuctionLog) log.getLogData();
-
         return CreateAuctionRequest.newBuilder()
-                .setPort(createAuctionLog.getPort())
-                .setIsServer(createAuctionLog.getServer())
-                .setAuction(auctionMapper.auctionFromAuctionData(createAuctionLog.getAuction()))
+                .setPort(log.getLogData().getCreateAuctionData().getPort())
+                .setIsServer(log.getLogData().getCreateAuctionData().getServer())
+                .setAuction(auctionMapper.auctionFromAuctionData(log.getLogData().getCreateAuctionData().getAuction()))
                 .build();
     }
 
