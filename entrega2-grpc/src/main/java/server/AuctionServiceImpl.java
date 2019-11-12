@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import domain.CreateAuctionLog;
 import domain.Log;
+import domain.LogData;
 import domain.LogFunctions;
 
 import org.apache.commons.collections4.BidiMap;
@@ -102,7 +103,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap;
 
         List<AuctionData> auctionsData = loadAuctions(sendBidRequest.getPort());
-        saveLogs(SEND_BID, sendBidRequest, sendBidRequest.getPort(), auctionsData, sendBidRequest.getIsServer());
+//        saveLogs(SEND_BID, sendBidRequest, sendBidRequest.getPort(), auctionsData, sendBidRequest.getIsServer());
         successes.add(updateBidIfPresentLocally(auctionsData, sendBidRequest.getId(), sendBidRequest.getBid(),
                 sendBidRequest.getPort(), sendBidRequest.getUsername()));
 
@@ -287,7 +288,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     public List<AuctionData> loadSnapshot(JsonLoader jsonLoader, Integer sufix) {
-        return new ArrayList<>(jsonLoader.loadList(SNAPSHOT_FILE_NAME_FORMAT + sufix + ".json", AuctionData.class));
+        return new ArrayList<>(jsonLoader.loadList(format(SNAPSHOT_FILE_NAME_FORMAT, sufix) , AuctionData.class));
     }
 
     private List<AuctionData> loadAuctions(Integer port) {
@@ -316,7 +317,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, port - SERVER_PORT), auctionsToSave);
     }
 
-    private void saveLogs(LogFunctions function, Object request, Integer port, Object data, Boolean isServer) {
+    private void saveLogs(LogFunctions function, LogData request, Integer port, Object data, Boolean isServer) {
         if (isServer) {
             return;
         }
@@ -325,8 +326,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         NextId nextLogId = loadLogOrSnapshotNextId(NEXT_LOG_FILE, jsonLoader);
         List<Log> logs = loadLogs(nextLogId.getId(), jsonLoader);
-
         validateIfNeedsToClearLogs(logs);
+
         logs.add(new Log(function, request));
         jsonLoader.saveFile(format(LOGS_FILE_NAME_PATTERN, nextLogId.getId()), logs);
 

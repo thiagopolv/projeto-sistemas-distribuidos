@@ -128,9 +128,9 @@ public class AuctionServer {
         logs.forEach(log -> {
 
             switch (log.getFunction()) {
-
                 case CREATE_AUCTION:
                     serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log));
+                    break;
             }
         });
     }
@@ -139,7 +139,7 @@ public class AuctionServer {
 
         AuctionMapper auctionMapper = new AuctionMapper();
 
-        CreateAuctionLog createAuctionLog = (CreateAuctionLog) log.getData();
+        CreateAuctionLog createAuctionLog = (CreateAuctionLog) log.getLogData();
 
         return CreateAuctionRequest.newBuilder()
                 .setPort(createAuctionLog.getPort())
@@ -156,6 +156,8 @@ public class AuctionServer {
 
         System.out.println(serversMap);
 
+        auctionServer.processLogs(serversMap);
+
         serversMap.forEach((server, serverConfig) -> {
             try {
                 server.awaitTermination();
@@ -164,7 +166,6 @@ public class AuctionServer {
             }
         });
 
-        auctionServer.processLogs(serversMap);
 
 //        List<AuctionServiceBlockingStub> stubs = auctionServer.buildStubs();
 

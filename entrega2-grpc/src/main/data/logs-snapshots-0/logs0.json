@@ -1,6 +1,6 @@
 [ {
   "function" : "CREATE_AUCTION",
-  "data" : {
+  "logData" : {
     "port" : 50000,
     "auction" : {
       "id" : 0,
