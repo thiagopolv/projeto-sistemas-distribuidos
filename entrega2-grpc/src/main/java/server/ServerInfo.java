@@ -10,6 +10,10 @@ public class ServerInfo {
     public ServerInfo() {
     }
 
+    public ServerInfo(Integer port) {
+        this.port = port;
+    }
+
     public ServerInfo(List<Integer> idsInServer) {
         this.idsInServer = idsInServer;
     }

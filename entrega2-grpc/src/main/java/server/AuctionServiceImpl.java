@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import domain.CreateAuctionLog;
 import domain.Log;
 import domain.LogFunctions;
+
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 
@@ -40,10 +41,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     private static final Integer NUMBER_OF_LOGS = getNumberOfLogs();
     private static final Integer LOG_SIZE = getLogSize();
 
+    private static final String NEXT_ID_FILE = "next-id.json";
     private static final String AUCTIONS_FILE_NAME_PATTERN = "auctions%d.json";
     private static final String LOGS_DIR_NAME_PATTERN = "logs-snapshots-%d";
     private static final String LOGS_FILE_NAME_PATTERN = "logs%d.json";
-    private static final String NEXT_ID_FILE = "next-id.json";
     private static final String NEXT_LOG_FILE = "next-log.json";
     private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
     private static final String SNAPSHOT_FILE_NAME_FORMAT = "snapshot%d.json";
@@ -62,7 +63,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getAuctions(GetAuctionsRequest getAuctionsRequest,
-                            StreamObserver<GetAuctionsResponse> responseObserver) {
+            StreamObserver<GetAuctionsResponse> responseObserver) {
         AuctionMapper mapper = new AuctionMapper();
 
         List<AuctionData> auctionsData = loadAuctions(getAuctionsRequest.getPort());
@@ -127,7 +128,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void createAuction(CreateAuctionRequest createAuctionRequest,
-                              StreamObserver<CreateAuctionResponse> responseObserver) {
+            StreamObserver<CreateAuctionResponse> responseObserver) {
         AuctionMapper auctionMapper = new AuctionMapper();
         List<Boolean> successes = new ArrayList<>();
         saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper),
@@ -152,9 +153,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getAuctionsIds(GetAuctionsIdsRequest getAuctionsIdsRequest,
-                               StreamObserver<GetAuctionsIdsResponse> responseObserver) {
-
-        AuctionMapper mapper = new AuctionMapper();
+            StreamObserver<GetAuctionsIdsResponse> responseObserver) {
 
         List<AuctionData> auctionsData = loadAuctions(getAuctionsIdsRequest.getPort());
         List<Integer> ids = auctionsData.stream()
@@ -172,7 +171,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private CreateAuctionResponse buildCreateAuctionResponse(AuctionMapper auctionMapper, List<Boolean> successes,
-                                                             AuctionData auctionToSave) {
+            AuctionData auctionToSave) {
         return CreateAuctionResponse.newBuilder()
                 .setAuction(auctionMapper.auctionFromAuctionData(auctionToSave))
                 .setSuccess(isSuccessfulCreate(successes))
@@ -217,7 +216,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
-    private CreateAuctionLog buildCreateAuctionLog(CreateAuctionRequest createAuctionRequest, AuctionMapper auctionMapper) {
+    private CreateAuctionLog buildCreateAuctionLog(CreateAuctionRequest createAuctionRequest,
+            AuctionMapper auctionMapper) {
         CreateAuctionLog log = new CreateAuctionLog();
         log.setAuction(auctionMapper.auctionDataFromAuction(createAuctionRequest.getAuction()));
         log.setPort(createAuctionRequest.getPort());
@@ -269,7 +269,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private Boolean updateBidIfPresentLocally(List<AuctionData> auctionsData, Integer id, Double newBid,
-                                              Integer port, String username) {
+            Integer port, String username) {
 
         Boolean success = null;
         AuctionData auctionToChange = getAuctionById(auctionsData, id);
@@ -284,6 +284,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             }
         }
         return success;
+    }
+
+    public List<AuctionData> loadSnapshot(JsonLoader jsonLoader, Integer sufix) {
+        return new ArrayList<>(jsonLoader.loadList(SNAPSHOT_FILE_NAME_FORMAT + sufix + ".json", AuctionData.class));
     }
 
     private List<AuctionData> loadAuctions(Integer port) {
@@ -301,25 +305,25 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return nextId.getId() - 1;
     }
 
-    private NextId loadLogNextId(String resource, JsonLoader jsonLoader) {
+    public NextId loadLogOrSnapshotNextId(String resource, JsonLoader jsonLoader) {
         NextId nextId = jsonLoader.loadObject(resource, NextId.class);
         return nextId;
     }
 
-    private void saveAuctions(List<AuctionData> auctionsToSave, Integer port) {
+    public void saveAuctions(List<AuctionData> auctionsToSave, Integer port) {
         JsonLoader jsonLoader = new JsonLoader("src/main/data");
 
         jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, port - SERVER_PORT), auctionsToSave);
     }
 
     private void saveLogs(LogFunctions function, Object request, Integer port, Object data, Boolean isServer) {
-        if(isServer) {
+        if (isServer) {
             return;
         }
 
         JsonLoader jsonLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN, SERVER_PORT - port));
 
-        NextId nextLogId = loadLogNextId(NEXT_LOG_FILE, jsonLoader);
+        NextId nextLogId = loadLogOrSnapshotNextId(NEXT_LOG_FILE, jsonLoader);
         List<Log> logs = loadLogs(nextLogId.getId(), jsonLoader);
 
         validateIfNeedsToClearLogs(logs);
@@ -332,7 +336,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     private void validateIfNeedsToAlternateLogFileAndCreateSnapshot(JsonLoader jsonLoader, NextId nextLogId,
             List<Log> logs, Object data, Integer port) {
 
-        if(logFileIsFull(logs)) {
+        if (logFileIsFull(logs)) {
             data = loadDataFromDBIfNecessary(data, port);
             alternateLogFile(jsonLoader, nextLogId);
             createSnapshot(jsonLoader, data);
@@ -340,14 +344,14 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private Object loadDataFromDBIfNecessary(Object data, Integer port) {
-        if(isNull(data)) {
+        if (isNull(data)) {
             data = loadAuctions(port);
         }
         return data;
     }
 
     private void createSnapshot(JsonLoader jsonLoader, Object data) {
-        NextId nextSnapshotId = loadLogNextId(NEXT_SNAPSHOT_FILE, jsonLoader);
+        NextId nextSnapshotId = loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, jsonLoader);
         jsonLoader.saveFile(format(SNAPSHOT_FILE_NAME_FORMAT, nextSnapshotId.getId()), data);
         setLogsAndSnapshotsNextId(nextSnapshotId);
         jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextSnapshotId);
@@ -376,7 +380,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return logs.size() == LOG_SIZE;
     }
 
-    private List<Log> loadLogs(Integer id, JsonLoader jsonLoader) {
+    public List<Log> loadLogs(Integer id, JsonLoader jsonLoader) {
         return new ArrayList<>(jsonLoader.loadList(format(LOGS_FILE_NAME_PATTERN, id),
                 Log.class));
     }

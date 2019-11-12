@@ -248,6 +248,6 @@ public class AuctionClient {
         ManagedChannel channel = client.buildChannel(getServerHost(), port);
         AuctionServiceBlockingStub stub = AuctionServiceGrpc.newBlockingStub(channel);
         client.chooseAction(stub, port);
-        channel.shutdown(); //
+        channel.shutdown();
     }
 }
