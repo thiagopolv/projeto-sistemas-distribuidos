@@ -93,8 +93,12 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap;
 
         List<AuctionData> auctionsData = loadAuctions(sendBidRequest.getPort());
-        saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), sendBidRequest.getPort(), auctionsData,
-                sendBidRequest.getIsServer(), sendBidRequest.getIsProcessLogs());
+
+        new Thread(() -> saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), sendBidRequest.getPort(), auctionsData,
+                sendBidRequest.getIsServer(), sendBidRequest.getIsProcessLogs())).start();
+
+//        saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), sendBidRequest.getPort(), auctionsData,
+//                sendBidRequest.getIsServer(), sendBidRequest.getIsProcessLogs());
         successes.add(updateBidIfPresentLocally(auctionsData, sendBidRequest.getId(), sendBidRequest.getBid(),
                 sendBidRequest.getPort(), sendBidRequest.getUsername()));
 
@@ -127,8 +131,12 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         Integer nextId = createAuctionRequest.getId() == 0 ? loadAuctionNextId(NEXT_ID_FILE) :
                 createAuctionRequest.getId();
 
-        saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper, nextId),
-                createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer(), createAuctionRequest.getIsProcessLogs());
+        new Thread(() -> saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper, nextId),
+                createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer(),
+                createAuctionRequest.getIsProcessLogs()));
+
+//        saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper, nextId),
+//                createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer(), createAuctionRequest.getIsProcessLogs());
 
         Auction auction = createAuctionRequest.getAuction();
         AuctionData auctionToSave = auctionMapper.auctionDataFromAuction(auction);
