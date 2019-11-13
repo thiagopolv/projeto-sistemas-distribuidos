@@ -42,6 +42,7 @@ message SendBidRequest {
     bool isServer = 3;
     int32 port = 4;
     string username = 5;
+    bool isProcessLogs = 6;
 }
 
 message SendBidResponse {
@@ -62,6 +63,8 @@ message CreateAuctionRequest {
     int32 port = 1;
     Auction auction = 2;
     bool isServer = 3;
+    bool isProcessLogs = 4;
+    int32 id = 5;
 }
 
 message CreateAuctionResponse {

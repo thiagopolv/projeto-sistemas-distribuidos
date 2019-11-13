@@ -1,15 +1,24 @@
 package server;
 
+import domain.CreateAuctionLog;
+import domain.Log;
+import domain.NextId;
+import domain.SendBidLog;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import mapper.AuctionData;
+import mapper.AuctionMapper;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import util.JsonLoader;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
+import static java.lang.Boolean.TRUE;
+import static java.lang.String.format;
 import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.getNumberOfServers;
 import static util.ConfigProperties.getServerHost;
@@ -23,6 +32,12 @@ public class AuctionServer {
     private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
     private static final String SERVER_HOST = getServerHost();
     private static final Integer SERVER_PORT = getServerPort();
+
+    private static final String LOGS_DIR_NAME_PATTERN = "logs-snapshots-%d";
+    private static final String LOGS_FILE_NAME_PATTERN = "logs%d.json";
+    private static final String NEXT_LOG_FILE = "next-log.json";
+    private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
+    private static final String SNAPSHOT_FILE_NAME_FORMAT = "snapshot%d.json";
 
     private BidiMap<Server, ServerInfo> serversInfo;
 
@@ -46,15 +61,15 @@ public class AuctionServer {
         return stubs;
     }
 
-    public BidiMap<Server, AuctionServiceBlockingStub> buildServers() throws IOException, InterruptedException {
+    public BidiMap<Server, ServerConfigs> buildServers() throws IOException, InterruptedException {
 
-        BidiMap<Server, AuctionServiceBlockingStub> serversMap = new DualHashBidiMap<>();
+        BidiMap<Server, ServerConfigs> serversMap = new DualHashBidiMap<>();
 
         for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
 
             Server server = buildAndStartAuctionServer(SERVER_PORT + i);
             AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
-            serversMap.put(server, stub);
+            serversMap.put(server, new ServerConfigs(SERVER_PORT + i, stub));
         }
 
         return serversMap;
@@ -91,15 +106,73 @@ public class AuctionServer {
         return server;
     }
 
+    public void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
+        AuctionServiceImpl auctionService = new AuctionServiceImpl();
+
+        serversMap.forEach((server, serverConfig) -> {
+            JsonLoader logAndSnapshotLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
+                    serverConfig.getPort() - SERVER_PORT));
+
+            NextId nextLogId = auctionService.loadLogOrSnapshotNextId(NEXT_LOG_FILE, logAndSnapshotLoader);
+            List<Log> logs = auctionService.loadLogs(nextLogId.getId(), logAndSnapshotLoader);
+
+            NextId nextSnapshotId = auctionService.loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logAndSnapshotLoader);
+            List<AuctionData> snapshot = auctionService.loadSnapshot(logAndSnapshotLoader, nextSnapshotId.getId());
+
+            auctionService.saveAuctions(snapshot, serverConfig.getPort());
+            executeLogs(serverConfig, logs, snapshot);
+        });
+    }
+
+    private void executeLogs(ServerConfigs serverConfigs, List<Log> logs, List<AuctionData> snapshot) {
+
+        logs.forEach(log -> {
+            switch (log.getFunction()) {
+                case CREATE_AUCTION:
+                    serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log.getLogData().getCreateAuctionData()));
+                    break;
+                case SEND_BID:
+                    serverConfigs.getStub().sendBid(buildSendBidRequestFromLog(log.getLogData().getSendBidData()));
+                    break;
+            }
+        });
+    }
+
+    private CreateAuctionRequest buildCreateAuctionRequestFromLog(CreateAuctionLog log) {
+
+        AuctionMapper auctionMapper = new AuctionMapper();
+
+        return CreateAuctionRequest.newBuilder()
+                .setId(log.getAuction().getId())
+                .setPort(log.getPort())
+                .setIsServer(log.getServer())
+                .setAuction(auctionMapper.auctionFromAuctionData(log.getAuction()))
+                .setIsProcessLogs(TRUE)
+                .build();
+    }
+
+    private SendBidRequest buildSendBidRequestFromLog(SendBidLog log) {
+
+        return SendBidRequest.newBuilder()
+                .setPort(log.getPort())
+                .setIsServer(log.getServer())
+                .setUsername(log.getUsername())
+                .setBid(log.getBid())
+                .setId(log.getId())
+                .setIsProcessLogs(TRUE)
+                .build();
+    }
+
     public static void main(String[] args) throws IOException, InterruptedException {
 
         AuctionServer auctionServer = new AuctionServer();
-
-        BidiMap<Server, AuctionServiceBlockingStub> serversMap = auctionServer.buildServers();
+        BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
 
         System.out.println(serversMap);
 
-        serversMap.forEach((server, serverInfo) -> {
+        auctionServer.processLogs(serversMap);
+
+        serversMap.forEach((server, serverConfig) -> {
             try {
                 server.awaitTermination();
             } catch (InterruptedException e) {
@@ -107,13 +180,10 @@ public class AuctionServer {
             }
         });
 
-//        ConfigProperties configProperties = ConfigProperties.getProperties();
-//
-//        Server server = ServerBuilder
-//                .forPort(getServerPort())
-//                .addService(new AuctionServiceImpl()).build();
-//
-//        server.start();
-//        server.awaitTermination();
+
+
+
     }
+
+
 }

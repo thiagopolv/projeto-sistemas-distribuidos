@@ -2,6 +2,7 @@ package client;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import mapper.AuctionData;
 import server.Auction;
 import server.AuctionServiceGrpc;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
@@ -17,6 +18,7 @@ import static client.ClientAction.INVALID;
 import static client.ClientAction.getEnumMap;
 import static java.lang.Boolean.FALSE;
 import static java.util.Comparator.comparingInt;
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static util.ConfigProperties.getDaysToExpireAuction;
 import static util.ConfigProperties.getNumberOfServers;
@@ -27,6 +29,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.stream.Collectors;
@@ -37,6 +40,10 @@ public class AuctionClient {
     private static final String SEND_BID_FAIL_MESSAGE = "There was an error sending your bid. Please, refresh " +
             "the auction list and try again.\n\n";
     private static final String INVALID_BID = "Your bid is less than the current bid: ";
+    private static final String SEPARATOR =
+            "_______________________________________________________________________________";
+
+
     private static final String DISCONNECT_VALUE = ClientAction.DISCONNECT.getAction();
     private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
     private static final Integer SERVER_PORT = getServerPort();
@@ -66,11 +73,10 @@ public class AuctionClient {
                 .build();
     }
 
-    public void chooseAction(AuctionServiceBlockingStub stub, Integer port) throws IOException, InterruptedException {
+    public void chooseAction(AuctionServiceBlockingStub stub, Integer port, ManagedChannel channel) {
         String action = EMPTY;
         String username = EMPTY;
         Scanner scanner = new Scanner(System.in);
-
         System.out.println("\nCONNECTION " + "\n");
         System.out.println("Username: ");
         username = scanner.nextLine();
@@ -88,14 +94,14 @@ public class AuctionClient {
         do {
             System.out.println("Action: ");
             action = scanner.nextLine();
-            System.out.println("_______________________________________________________________________________");
-            executeAction(action.toUpperCase(), stub, username, port);
+            System.out.println(SEPARATOR);
+            executeAction(action.toUpperCase(), stub, username, port, channel);
 
         } while (!action.toUpperCase().equals(DISCONNECT_VALUE));
     }
 
 
-    private void executeAction(String action, AuctionServiceBlockingStub stub, String username, Integer port) {
+    private void executeAction(String action, AuctionServiceBlockingStub stub, String username, Integer port, ManagedChannel channel) {
 
         ClientAction clientAction = getEnumMap().containsValue(action) ? getEnumMap().getKey(action) : INVALID;
 
@@ -114,6 +120,7 @@ public class AuctionClient {
                 break;
             case DISCONNECT:
                 sendDisconnectMessage();
+                channel.shutdown();
                 break;
             case INVALID:
                 sendInvalidActionMessage();
@@ -127,7 +134,7 @@ public class AuctionClient {
         } else {
             System.out.println("An error ocurred creating the auction.");
         }
-        System.out.println("_______________________________________________________________________________");
+        System.out.println(SEPARATOR);
     }
 
     private void sendDisconnectMessage() {
@@ -136,7 +143,7 @@ public class AuctionClient {
 
     private void sendInvalidActionMessage() {
         System.out.println("Invalid action, please send another.");
-        System.out.println("_______________________________________________________________________________");
+        System.out.println(SEPARATOR);
     }
 
     private CreateAuctionRequest buildCreateAuctionRequestFromUserInput(String username, Integer port) {
@@ -157,6 +164,7 @@ public class AuctionClient {
                 .setPort(port)
                 .setIsServer(FALSE)
                 .setAuction(auction)
+                .setIsProcessLogs(FALSE)
                 .build();
     }
 
@@ -188,7 +196,7 @@ public class AuctionClient {
                         + "    FINISH DATE: " + auction.getFinishTime());
                 System.out.println("CURRENT BID: " + auction.getCurrentBidInfo().getValue()
                         + "    BUYER: " + auction.getCurrentBidInfo().getUsername());
-                System.out.println("_______________________________________________________________________________");
+                System.out.println(SEPARATOR);
         });
     }
 
@@ -198,33 +206,39 @@ public class AuctionClient {
 
         System.out.println("Insert the auction Id you want to send the bid: ");
         Integer id = sc.nextInt();
+
+        Auction auction = getAuctionById(auctions, id);
+        if (isNull(auction)) {
+            System.out.println("There is no active auction with this ID.");
+            return;
+        }
+
         System.out.println("Insert bid value: (Format: 10.00) ");
         Double bid = sc.nextDouble();
-        System.out.println("_______________________________________________________________________________");
+        System.out.println(SEPARATOR);
 
-        Double currentBid = getAuctionById(auctions, id).getCurrentBidInfo().getValue();
+        Double currentBid = auction.getCurrentBidInfo().getValue();
 
         if (isInvalidBid(bid, currentBid)) {
             System.out.println(INVALID_BID + String.format("%.2f", currentBid));
-            System.out.println("_______________________________________________________________________________");
+            System.out.println(SEPARATOR);
         } else {
             SendBidResponse sendBidResponse = stub.sendBid(buildSendBidRequest(id, bid, username, port));
             System.out.println(sendBidResponse.getSuccess() ? SEND_BID_SUCCESS_MESSAGE : SEND_BID_FAIL_MESSAGE);
-            System.out.println("_______________________________________________________________________________");
+            System.out.println(SEPARATOR);
         }
     }
 
     private boolean isInvalidBid(Double bid, Double currentBid) {
-        return bid < currentBid;
+        return bid <= currentBid;
     }
 
 
     private Auction getAuctionById(List<Auction> list, Integer id) {
-
         return list.stream()
                 .filter(auction -> auction.getId() == id)
-                .collect(Collectors.toList())
-                .get(0);
+                .findAny()
+                .orElse(null);
     }
 
     private SendBidRequest buildSendBidRequest(Integer id, Double bid, String username, Integer port) {
@@ -233,6 +247,8 @@ public class AuctionClient {
                 .setBid(bid)
                 .setUsername(username)
                 .setPort(port)
+                .setIsServer(FALSE)
+                .setIsProcessLogs(FALSE)
                 .build();
     }
 
@@ -244,10 +260,10 @@ public class AuctionClient {
         AuctionClient client = new AuctionClient();
         List<Integer> ports = client.getServerPorts();
         Integer port = client.getRandomPort(ports);
-
+        System.out.println(port);
         ManagedChannel channel = client.buildChannel(getServerHost(), port);
         AuctionServiceBlockingStub stub = AuctionServiceGrpc.newBlockingStub(channel);
-        client.chooseAction(stub, port);
-        channel.shutdown(); //
+        client.chooseAction(stub, port, channel);
+        channel.shutdown();
     }
 }

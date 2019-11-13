@@ -1,18 +1,16 @@
 package domain;
 
-import java.util.Map;
-
 public class Log {
 
     private LogFunctions function;
-    private Object data;
+    private LogData logData;
 
     public Log() {
     }
 
-    public Log(LogFunctions function, Object data) {
+    public Log(LogFunctions function, LogData logData) {
         this.function = function;
-        this.data = data;
+        this.logData = logData;
     }
 
     public LogFunctions getFunction() {
@@ -23,11 +21,11 @@ public class Log {
         this.function = function;
     }
 
-    public Object getData() {
-        return data;
+    public LogData getLogData() {
+        return logData;
     }
 
-    public void setData(Object data) {
-        this.data = data;
+    public void setLogData(LogData logData) {
+        this.logData = logData;
     }
 }

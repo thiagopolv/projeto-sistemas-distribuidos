@@ -11,6 +11,13 @@ public class CreateAuctionLog {
     public CreateAuctionLog() {
     }
 
+//    public CreateAuctionLog(LogFunctions function, Object data, Integer port, AuctionData auction,
+//            Boolean isServer) {
+//        this.port = port;
+//        this.auction = auction;
+//        this.isServer = isServer;
+//    }
+
     public CreateAuctionLog(Integer port, AuctionData auction, Boolean isServer) {
         this.port = port;
         this.auction = auction;
@@ -40,4 +47,6 @@ public class CreateAuctionLog {
     public void setServer(Boolean server) {
         isServer = server;
     }
+
+
 }
