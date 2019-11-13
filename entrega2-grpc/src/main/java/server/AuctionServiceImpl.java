@@ -509,41 +509,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //            }
 //        });
 
-//        auctionService.getAuctions(auctionService.buildGetAuctionsRequest(50001, false),
-//                new StreamObserver<GetAuctionsResponse>() {
-//                    @Override
-//                    public void onNext(GetAuctionsResponse getAuctionsResponse) {
-//
-//                    }
-//
-//                    @Override
-//                    public void onError(Throwable throwable) {
-//
-//                    }
-//
-//                    @Override
-//                    public void onCompleted() {
-//
-//                    }
-//                });
-
-        auctionService.createAuction(CreateAuctionRequest.newBuilder()
-                        .setAuction(Auction.newBuilder()
-                                .setOwner("tester")
-                                .setCurrentBidInfo(CurrentBidInfo.newBuilder()
-                                        .setValue(5.00)
-                                        .setUsername("")
-                                        .build())
-                                .setInitialValue(5.00)
-                                .setFinishTime(LocalDateTime.now().toString())
-                                .setProduct("pen")
-                                .build())
-                        .setIsServer(FALSE)
-                        .setPort(50002)
-                        .build(),
-                new StreamObserver<CreateAuctionResponse>() {
+        auctionService.getAuctions(auctionService.buildGetAuctionsRequest(50001, false),
+                new StreamObserver<GetAuctionsResponse>() {
                     @Override
-                    public void onNext(CreateAuctionResponse createAuctionResponse) {
+                    public void onNext(GetAuctionsResponse getAuctionsResponse) {
 
                     }
 
@@ -557,5 +526,36 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
                     }
                 });
+
+//        auctionService.createAuction(CreateAuctionRequest.newBuilder()
+//                        .setAuction(Auction.newBuilder()
+//                                .setOwner("tester")
+//                                .setCurrentBidInfo(CurrentBidInfo.newBuilder()
+//                                        .setValue(5.00)
+//                                        .setUsername("")
+//                                        .build())
+//                                .setInitialValue(5.00)
+//                                .setFinishTime(LocalDateTime.now().toString())
+//                                .setProduct("pen")
+//                                .build())
+//                        .setIsServer(FALSE)
+//                        .setPort(50001)
+//                        .build(),
+//                new StreamObserver<CreateAuctionResponse>() {
+//                    @Override
+//                    public void onNext(CreateAuctionResponse createAuctionResponse) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onError(Throwable throwable) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onCompleted() {
+//
+//                    }
+//                });
     }
 }

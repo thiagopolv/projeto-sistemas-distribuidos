@@ -6,6 +6,7 @@ import static java.util.Objects.isNull;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import domain.AuctionStatus;
 import server.Auction;
@@ -62,7 +63,9 @@ public class AuctionMapper {
             list.add(newData);
         });
 
-        return list;
+        return list.stream()
+                .filter(auction -> auction.getStatus() == GOING_ON)
+                .collect(Collectors.toList());
     }
 
     private String getCurrentBidUsername(AuctionData auctionData) {
