@@ -1,1 +1,25 @@
-[]
+[ {
+  "function" : "SEND_BID",
+  "logData" : {
+    "createAuctionData" : null,
+    "sendBidData" : {
+      "id" : 49,
+      "bid" : 6.0,
+      "port" : 50003,
+      "username" : "thiago",
+      "server" : true
+    }
+  }
+}, {
+  "function" : "SEND_BID",
+  "logData" : {
+    "createAuctionData" : null,
+    "sendBidData" : {
+      "id" : 50,
+      "bid" : 10.0,
+      "port" : 50003,
+      "username" : "thiago",
+      "server" : true
+    }
+  }
+} ]

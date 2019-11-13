@@ -3,6 +3,7 @@ package mapper;
 import static domain.AuctionStatus.GOING_ON;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import domain.AuctionStatus;
 
@@ -86,7 +87,18 @@ public class AuctionData {
         this.status = status;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AuctionData that = (AuctionData) o;
+        return id.equals(that.id);
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 
     @Override
     public String toString() {

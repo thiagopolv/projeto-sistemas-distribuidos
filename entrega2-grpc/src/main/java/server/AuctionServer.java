@@ -3,6 +3,7 @@ package server;
 import domain.CreateAuctionLog;
 import domain.Log;
 import domain.NextId;
+import domain.SendBidLog;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
+import static java.lang.Boolean.TRUE;
 import static java.lang.String.format;
 import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.getNumberOfServers;
@@ -124,32 +126,46 @@ public class AuctionServer {
 
     private void executeLogs(ServerConfigs serverConfigs, List<Log> logs, List<AuctionData> snapshot) {
 
-
         logs.forEach(log -> {
-
             switch (log.getFunction()) {
                 case CREATE_AUCTION:
-                    serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log));
+                    serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log.getLogData().getCreateAuctionData()));
+                    break;
+                case SEND_BID:
+                    serverConfigs.getStub().sendBid(buildSendBidRequestFromLog(log.getLogData().getSendBidData()));
                     break;
             }
         });
     }
 
-    private CreateAuctionRequest buildCreateAuctionRequestFromLog(Log log) {
+    private CreateAuctionRequest buildCreateAuctionRequestFromLog(CreateAuctionLog log) {
 
         AuctionMapper auctionMapper = new AuctionMapper();
 
         return CreateAuctionRequest.newBuilder()
-                .setPort(log.getLogData().getCreateAuctionData().getPort())
-                .setIsServer(log.getLogData().getCreateAuctionData().getServer())
-                .setAuction(auctionMapper.auctionFromAuctionData(log.getLogData().getCreateAuctionData().getAuction()))
+                .setId(log.getAuction().getId())
+                .setPort(log.getPort())
+                .setIsServer(log.getServer())
+                .setAuction(auctionMapper.auctionFromAuctionData(log.getAuction()))
+                .setIsProcessLogs(TRUE)
+                .build();
+    }
+
+    private SendBidRequest buildSendBidRequestFromLog(SendBidLog log) {
+
+        return SendBidRequest.newBuilder()
+                .setPort(log.getPort())
+                .setIsServer(log.getServer())
+                .setUsername(log.getUsername())
+                .setBid(log.getBid())
+                .setId(log.getId())
+                .setIsProcessLogs(TRUE)
                 .build();
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
 
         AuctionServer auctionServer = new AuctionServer();
-
         BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
 
         System.out.println(serversMap);
@@ -164,8 +180,6 @@ public class AuctionServer {
             }
         });
 
-
-//        List<AuctionServiceBlockingStub> stubs = auctionServer.buildStubs();
 
 
 
