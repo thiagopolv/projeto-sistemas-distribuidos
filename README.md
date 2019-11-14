@@ -138,15 +138,15 @@ mvn exec:java -Dexec.mainClass=client.AuctionClient
 
 2. No diretório *java*, estão as classes Java do cliente, servidor, e outras classes auxiliares. Dentro desse diretório, tem-se os seguintes diretórios:
 
-..*2.1 *client*: Contém as classes referentes à execução do cliente.
+..* 2.1 *client*: Contém as classes referentes à execução do cliente.
 
-..*2.2 *domain*: Contém as classes referentes à persistência de dados, como as entidades de Leilão e de Logs.
+..* 2.2 *domain*: Contém as classes referentes à persistência de dados, como as entidades de Leilão e de Logs.
 
-..*2.3 *mapper*: Contém classes que fazem mapeamento entre classes de entidade e classes de transmissão do gRPC.
+..* 2.3 *mapper*: Contém classes que fazem mapeamento entre classes de entidade e classes de transmissão do gRPC.
 
-..*2.4 *server*: Contém classes referentes à execução do servidor e de implementação dos serviços gerados pelo gRPC.
+..* 2.4 *server*: Contém classes referentes à execução do servidor e de implementação dos serviços gerados pelo gRPC.
 
-..*2.5 *util*: Contém classes auxiliares de leitura e escrita nos arquivos .json e de leitura do arquivo de properties.
+..* 2.5 *util*: Contém classes auxiliares de leitura e escrita nos arquivos .json e de leitura do arquivo de properties.
 
 3. No diretório *proto* está o arquivo .proto que define os serviços fornecidos pelo servidor e os objetos de request e response que esses serviços esperam receber do client e enviar como resposta.
 
