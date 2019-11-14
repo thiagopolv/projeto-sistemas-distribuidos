@@ -132,7 +132,7 @@ mvn exec:java -Dexec.mainClass=client.AuctionClient
 
 
 ## Estrutura
-- O projeto é estruturado da seguinte maneira:
+O projeto é estruturado da seguinte maneira:
 
 1. No diretório *data*, estão os dados de cada servidor sobre leilões, os logs e snapshots. 
 
