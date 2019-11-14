@@ -134,9 +134,9 @@ mvn exec:java -Dexec.mainClass=client.AuctionClient
 ## Estrutura
 O projeto é estruturado da seguinte maneira:
 
-1. No diretório *data*, estão os dados de cada servidor sobre leilões, os logs e snapshots. 
+- 1. No diretório *data*, estão os dados de cada servidor sobre leilões, os logs e snapshots. 
 
-2. No diretório *java*, estão as classes Java do cliente, servidor, e outras classes auxiliares. Dentro desse diretório, tem-se os seguintes diretórios:
+- 2. No diretório *java*, estão as classes Java do cliente, servidor, e outras classes auxiliares. Dentro desse diretório, tem-se os seguintes diretórios:
 
   2.1- *client*: Contém as classes referentes à execução do cliente.
 
@@ -148,9 +148,9 @@ O projeto é estruturado da seguinte maneira:
 
   2.5- *util*: Contém classes auxiliares de leitura e escrita nos arquivos .json e de leitura do arquivo de properties.
 
-3. No diretório *proto* está o arquivo .proto que define os serviços fornecidos pelo servidor e os objetos de request e response que esses serviços esperam receber do client e enviar como resposta.
+- 3. No diretório *proto* está o arquivo .proto que define os serviços fornecidos pelo servidor e os objetos de request e response que esses serviços esperam receber do client e enviar como resposta.
 
-4. Finalmente, o diretório *resources* contém o arquivo de properties do projeto.
+- 4. Finalmente, o diretório *resources* contém o arquivo de properties do projeto.
 
 
 
