@@ -110,7 +110,29 @@ https://www.oracle.com/technetwork/pt/java/javase/downloads/jdk8-downloads-21331
 ```
 mvn clean install
 ```
-- No projeto temos o diretório do servidor, chamado 
+- No projeto temos o diretório do servidor, chamado *server*. Para executar o servidor, executa-se o comando:
+```
+mvn exec:java -Dexec.mainClass=server.AuctionServer
+```
+A quantidade de servidores que são iniciados é definida por properties.
+
+- O diretório do cliente é *client*. Para executar o cliente, executa-se o comando:
+```
+mvn exec:java -Dexec.mainClass=client.AuctionClient
+```
+
+## Serviços
+- Os serviços básicos definidos no arquivo .proto, presente no diretório *proto*, são: 
+
+Listar leilões, em que o servidor que atende ao cliente informa a este quais os seus leilões e busca dos demais servidores quais os seus leilões; 
+
+Criar leilão, em que o servidor cria localmente o leilão e chama os leilões subsequentes (a quantidade é definida por properties) para salvar localmente; 
+
+E enviar lance, em que o servidor verifica se tem o leilão localmente, atualiza o lance se tiver, e chama os demais servidores para verificar se eles tem o mesmo leilão para salvar localmente.  
+
+
+
+
 
 
 
