@@ -93,6 +93,27 @@ persistência e cache.
 ### Camada de controle
 - Os arquivos client.js e server.js são arquivos que gerenciam os sockets e a comunicação entre eles. Elas são responsáveis por comunicar entre as frentes mandando uma 'ação', o 'tipo da ação' e os dados necessários para a aplicação, por exemplo, o token de sessão.
 
+
+# Entrega 2: Leilão Online usando gRPC e Java
+
+## Introdução
+- O projeto consiste em um leilão online onde os usuários podem basicamente criar um leilão, listar os leilões ativos e dar lances nestes leilões.
+- O projeto utiliza gRPC com Java 8.
+- Foi utilizado o Maven como gerenciador de dependências.
+
+## Executar o projeto
+- Para executar o projeto, é necessário instalar o Java 8, disponível em: 
+```
+https://www.oracle.com/technetwork/pt/java/javase/downloads/jdk8-downloads-2133151.html
+```
+- Feito isso, é necessário clonar o repositório e buildar com o Maven utilizando o seguinte comando:
+```
+mvn clean install
+```
+- No projeto temos o diretório do servidor, chamado 
+
+
+
 # Autores
 
 * **Rodrigo Pereira** - [Github](https://github.com/rodrigorpo)
