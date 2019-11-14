@@ -124,11 +124,15 @@ mvn exec:java -Dexec.mainClass=client.AuctionClient
 ## Serviços
 - Os serviços básicos definidos no arquivo .proto, presente no diretório *proto*, são: 
 
-Listar leilões, em que o servidor que atende ao cliente informa a este quais os seus leilões e busca dos demais servidores quais os seus leilões; 
+1. Listar leilões, em que o servidor que atende ao cliente informa a este quais os seus leilões e busca dos demais servidores quais os seus leilões; 
 
-Criar leilão, em que o servidor cria localmente o leilão e chama os leilões subsequentes (a quantidade é definida por properties) para salvar localmente; 
+2. Criar leilão, em que o servidor cria localmente o leilão e chama os leilões subsequentes (a quantidade é definida por properties) para salvar localmente; 
 
-E enviar lance, em que o servidor verifica se tem o leilão localmente, atualiza o lance se tiver, e chama os demais servidores para verificar se eles tem o mesmo leilão para salvar localmente.  
+3. E enviar lance, em que o servidor verifica se tem o leilão localmente, atualiza o lance se tiver, e chama os demais servidores para verificar se eles tem o mesmo leilão para salvar localmente.  
+
+
+## Estrutura
+- O projeto é estruturado 
 
 
 
