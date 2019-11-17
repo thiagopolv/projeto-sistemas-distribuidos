@@ -6,8 +6,9 @@ import java.util.Properties;
 
 public class ConfigProperties extends Properties {
 
-    private static final String ROOT_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath();
-    private static final String CONFIG_PATH = ROOT_PATH + "application.properties";
+    private static String ROOT_PATH = Thread.currentThread().getContextClassLoader().getResource("")
+            .getPath();
+    private static String CONFIG_PATH;
 
     private static ConfigProperties configProperties = null;
 
@@ -16,8 +17,10 @@ public class ConfigProperties extends Properties {
 
     public static ConfigProperties getProperties() {
 
-        if(configProperties == null) {
+        if (configProperties == null) {
             configProperties = new ConfigProperties();
+            ROOT_PATH = modifyPathIfOSNotcompatible();
+            CONFIG_PATH = ROOT_PATH + "application.properties";
             try {
                 FileInputStream in = new FileInputStream(CONFIG_PATH);
                 configProperties.load(in);
@@ -56,6 +59,13 @@ public class ConfigProperties extends Properties {
 
     public static Integer getLogSize() {
         return Integer.parseInt(getProperties().getProperty("log.size"));
+    }
+
+    private static String modifyPathIfOSNotcompatible() {
+        if (System.getProperty("os.name").contains("Windows")) {
+            return System.getProperty("user.dir") + "\\target\\classes\\";
+        }
+        return ROOT_PATH;
     }
 }
 
