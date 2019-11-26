@@ -1,24 +1,21 @@
 package client;
 
-import io.grpc.ManagedChannel;
 import server.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Scanner;
 
-import static java.lang.Boolean.FALSE;
-import static java.util.Comparator.comparingInt;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.isNull;
 import static util.ConfigProperties.getDaysToExpireAuction;
 
 class ClientService {
-    private AuctionServiceGrpc.AuctionServiceBlockingStub stub;
-    private Integer port;
-    private ManagedChannel channel;
-    private String username;
 
-    static final String SEPARATOR2 =
+    private String username;
+    private ClientConnectionProperties connectionProperties;
+
+    private static final String SEPARATOR2 =
             "_______________________________________________________________________________\n\n\n";
     private static final String SEND_BID_SUCCESS_MESSAGE = "Your bid was sent successfully.\n\n";
     private static final String SEND_BID_FAIL_MESSAGE = "There was an error sending your bid. Please, refresh " +
@@ -27,9 +24,7 @@ class ClientService {
     private static final Integer DAYS_TO_FINISH_AUCTION = getDaysToExpireAuction();
 
     ClientService(ClientConnectionProperties connectionProperties, String username) {
-        this.stub = connectionProperties.getStub();
-        this.port = connectionProperties.getPort();
-        this.channel = connectionProperties.getChannel();
+        this.connectionProperties = connectionProperties;
         this.username = username;
     }
 
@@ -44,7 +39,7 @@ class ClientService {
             return null;
         }
         auctions.stream()
-                .sorted(comparingInt(Auction::getId))
+                .sorted(comparing(Auction::getId))
                 .forEach(auction -> {
                     System.out.println("ID: " + auction.getId() + "   PRODUCT: " + auction.getProduct()
                             + "    OWNER: " + auction.getOwner());
@@ -63,7 +58,7 @@ class ClientService {
         Scanner sc = new Scanner(System.in);
 
         System.out.println("Insert the auction Id you want to send the bid: ");
-        Integer id = sc.nextInt();
+        String id = sc.nextLine();
 
         Auction auction = getAuctionById(auctions, id);
         if (isNull(auction)) {
@@ -81,7 +76,7 @@ class ClientService {
             System.out.println(INVALID_BID + String.format("%.2f", currentBid));
             System.out.println(SEPARATOR2);
         } else {
-            SendBidResponse sendBidResponse = stub.sendBid(buildSendBidRequest(id, bid, username, port));
+            SendBidResponse sendBidResponse = connectionProperties.getStub().sendBid(buildSendBidRequest(id, bid, username));
             System.out.println(sendBidResponse.getSuccess() ? SEND_BID_SUCCESS_MESSAGE : SEND_BID_FAIL_MESSAGE);
             System.out.println(SEPARATOR2);
         }
@@ -90,7 +85,7 @@ class ClientService {
 
     Void sendDisconnectAndSendMessage() {
         System.out.println("Disconnected.");
-        channel.shutdown();
+        connectionProperties.getChannel().shutdown();
         return null;
     }
 
@@ -101,20 +96,20 @@ class ClientService {
     }
 
     private GetAuctionsResponse getAuctions() {
-        return stub.getAuctions(buildGetAuctionsRequest(port));
+        return connectionProperties.getStub().getAuctions(buildGetAuctionsRequest());
     }
 
     private List<Auction> getAuctionsList() {
         return getAuctions().getAuctionsList();
     }
 
-    private GetAuctionsRequest buildGetAuctionsRequest(Integer port) {
-        return GetAuctionsRequest.newBuilder().setPort(port).build();
+    private GetAuctionsRequest buildGetAuctionsRequest() {
+        return GetAuctionsRequest.newBuilder().build();
     }
 
-    private Auction getAuctionById(List<Auction> list, Integer id) {
+    private Auction getAuctionById(List<Auction> list, String id) {
         return list.stream()
-                .filter(auction -> auction.getId() == id)
+                .filter(auction -> auction.getId().equals(id))
                 .findAny()
                 .orElse(null);
     }
@@ -123,20 +118,17 @@ class ClientService {
         return bid <= currentBid;
     }
 
-    private SendBidRequest buildSendBidRequest(Integer id, Double bid, String username, Integer port) {
+    private SendBidRequest buildSendBidRequest(String id, Double bid, String username) {
         return SendBidRequest.newBuilder()
                 .setId(id)
                 .setBid(bid)
                 .setUsername(username)
-                .setPort(port)
-                .setIsServer(FALSE)
-                .setIsProcessLogs(FALSE)
                 .build();
     }
 
     Void createAuctionAndSendMessage() {
         CreateAuctionRequest createAuctionRequest = buildCreateAuctionRequestFromUserInput();
-        CreateAuctionResponse response = stub.createAuction(createAuctionRequest);
+        CreateAuctionResponse response = connectionProperties.getStub().createAuction(createAuctionRequest);
         sendCreateAuctionMessage(response);
         return null;
     }
@@ -151,7 +143,7 @@ class ClientService {
 
         Auction auction = buildAuction(username, product, initialValue);
 
-        return buildCreateAuctionRequest(auction, port);
+        return buildCreateAuctionRequest(auction);
     }
 
     private void sendCreateAuctionMessage(CreateAuctionResponse createAuctionResponse) {
@@ -164,12 +156,9 @@ class ClientService {
         System.out.println(SEPARATOR2);
     }
 
-    private CreateAuctionRequest buildCreateAuctionRequest(Auction auction, Integer port) {
+    private CreateAuctionRequest buildCreateAuctionRequest(Auction auction) {
         return CreateAuctionRequest.newBuilder()
-                .setPort(port)
-                .setIsServer(FALSE)
                 .setAuction(auction)
-                .setIsProcessLogs(FALSE)
                 .build();
     }
 

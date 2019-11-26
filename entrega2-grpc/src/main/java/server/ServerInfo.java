@@ -49,4 +49,12 @@ public class ServerInfo {
                 ", idsInServer=" + idsInServer +
                 '}';
     }
+
+    public Map<String, String> getHashTable() {
+        return hashTable;
+    }
+
+    public void setHashTable(Map<String, String> hashTable) {
+        this.hashTable = hashTable;
+    }
 }

@@ -20,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
-import static java.lang.Boolean.TRUE;
 import static java.lang.String.format;
 import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.*;
@@ -42,9 +41,10 @@ public class AuctionServer {
         Map<String, String> hashTable = generateHashTable();
 
         for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
-            Server server = buildAndStartAuctionServer(SERVER_PORT + i);
             AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
-            serversMap.put(server, new ServerConfigs(SERVER_PORT + i, stub, hashTable));
+            ServerConfigs serverConfigs = new ServerConfigs(SERVER_PORT + i, stub, hashTable);
+            Server server = buildAndStartAuctionServer(SERVER_PORT + i, serverConfigs);
+            serversMap.put(server, serverConfigs);
         }
 
         return serversMap;
@@ -68,8 +68,8 @@ public class AuctionServer {
         return list;
     }
 
-    private String generateSha1Hash(String dataToDiggest) {
-        return DigestUtils.sha1Hex(dataToDiggest.getBytes(StandardCharsets.UTF_8));
+    private String generateSha1Hash(String dataToDigest) {
+        return DigestUtils.sha1Hex(dataToDigest.getBytes(StandardCharsets.UTF_8));
     }
 
     private ManagedChannel buildChannel(String host, Integer port) {
@@ -82,11 +82,11 @@ public class AuctionServer {
         return newBlockingStub(channel);
     }
 
-    private Server buildAndStartAuctionServer(Integer port) {
+    private Server buildAndStartAuctionServer(Integer port, ServerConfigs serverConfigs) {
 
         Server server = ServerBuilder
                 .forPort(port)
-                .addService(new AuctionServiceImpl()).build();
+                .addService(new AuctionServiceImpl(serverConfigs)).build();
 
         try {
             server.start();
@@ -99,7 +99,7 @@ public class AuctionServer {
         return server;
     }
 
-    public void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
+    private void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
         AuctionServiceImpl auctionService = new AuctionServiceImpl();
 
         serversMap.forEach((server, serverConfig) -> {
@@ -136,23 +136,16 @@ public class AuctionServer {
         AuctionMapper auctionMapper = new AuctionMapper();
 
         return CreateAuctionRequest.newBuilder()
-                .setId(log.getAuction().getId())
-                .setPort(log.getPort())
-                .setIsServer(log.getServer())
                 .setAuction(auctionMapper.auctionFromAuctionData(log.getAuction()))
-                .setIsProcessLogs(TRUE)
                 .build();
     }
 
     private SendBidRequest buildSendBidRequestFromLog(SendBidLog log) {
 
         return SendBidRequest.newBuilder()
-                .setPort(log.getPort())
-                .setIsServer(log.getServer())
                 .setUsername(log.getUsername())
                 .setBid(log.getBid())
                 .setId(log.getId())
-                .setIsProcessLogs(TRUE)
                 .build();
     }
 
@@ -173,6 +166,4 @@ public class AuctionServer {
             }
         });
     }
-
-
 }

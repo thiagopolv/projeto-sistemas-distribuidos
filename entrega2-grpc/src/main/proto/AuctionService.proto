@@ -2,23 +2,11 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "server";
 
-message AuctionRequest {
-    string action = 1;
-    string data = 2;
-}
-
-message AuctionResponse {
-    string action = 1;
-    string data = 2;
-}
-
 message GetAuctionsRequest {
-    int32 port = 1;
-    bool isServer = 2;
 }
 
 message Auction {
-    int32 id = 1;
+    string id = 1;
     string owner = 2;
     string product = 3;
     double initialValue = 4;
@@ -37,12 +25,9 @@ message GetAuctionsResponse {
 }
 
 message SendBidRequest {
-    int32 id = 1;
+    string id = 1;
     double bid = 2;
-    bool isServer = 3;
-    int32 port = 4;
-    string username = 5;
-    bool isProcessLogs = 6;
+    string username = 3;
 }
 
 message SendBidResponse {
@@ -52,19 +37,14 @@ message SendBidResponse {
 }
 
 message GetAuctionsIdsRequest {
-    int32 port = 1;
 }
 
 message GetAuctionsIdsResponse {
-    repeated int32 ids = 1;
+    repeated string ids = 1;
 }
 
 message CreateAuctionRequest {
-    int32 port = 1;
-    Auction auction = 2;
-    bool isServer = 3;
-    bool isProcessLogs = 4;
-    int32 id = 5;
+    Auction auction = 1;
 }
 
 message CreateAuctionResponse {
@@ -72,9 +52,30 @@ message CreateAuctionResponse {
     Auction auction = 2;
 }
 
+
+message AuctionRequest {
+    string action = 1;
+    string data = 2;
+}
+
+message AuctionResponse {
+    string action = 1;
+    string data = 2;
+}
+
+message VerifyAuctionRequest {
+    string id = 1;
+}
+
+message VerifyAuctionResponse {
+    bool hasAuction = 1;
+}
+
 service AuctionService {
     rpc auction (AuctionRequest) returns (AuctionResponse);
+
     rpc getAuctions (GetAuctionsRequest) returns (GetAuctionsResponse);
+    rpc verifyAuctionOnOtherServers (VerifyAuctionRequest) returns (VerifyAuctionResponse);
     rpc sendBid (SendBidRequest) returns (SendBidResponse);
     rpc getAuctionsIds(GetAuctionsIdsRequest) returns (GetAuctionsIdsResponse);
     rpc createAuction(CreateAuctionRequest) returns (CreateAuctionResponse);

@@ -1,12 +1,12 @@
 [ {
-  "id" : 56,
+  "id" : 57,
   "owner" : "rodrigo",
-  "product" : "tenis",
+  "product" : "asd",
   "initialValue" : 1.0,
   "currentBidInfo" : {
-    "value" : 1.0,
-    "username" : ""
+    "value" : 2.0,
+    "username" : "rodrigo"
   },
-  "finishTime" : "2019-11-23T02:00:20.267832700",
+  "finishTime" : "2019-11-25T00:27:35.606198100",
   "status" : null
 } ]
