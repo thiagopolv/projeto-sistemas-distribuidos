@@ -99,23 +99,23 @@ public class AuctionServer {
         return server;
     }
 
-    private void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
-        AuctionServiceImpl auctionService = new AuctionServiceImpl();
-
-        serversMap.forEach((server, serverConfig) -> {
-            JsonLoader logAndSnapshotLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
-                    serverConfig.getPort() - SERVER_PORT));
-
-            NextId nextLogId = auctionService.loadLogOrSnapshotNextId(NEXT_LOG_FILE, logAndSnapshotLoader);
-            List<Log> logs = auctionService.loadLogs(nextLogId.getId(), logAndSnapshotLoader);
-
-            NextId nextSnapshotId = auctionService.loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logAndSnapshotLoader);
-            List<AuctionData> snapshot = auctionService.loadSnapshot(logAndSnapshotLoader, nextSnapshotId.getId());
-
-            auctionService.saveAuctions(snapshot, serverConfig.getPort());
-            executeLogs(serverConfig, logs, snapshot);
-        });
-    }
+//    private void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
+//        AuctionServiceImpl auctionService = new AuctionServiceImpl();
+//
+//        serversMap.forEach((server, serverConfig) -> {
+//            JsonLoader logAndSnapshotLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
+//                    serverConfig.getPort() - SERVER_PORT));
+//
+//            NextId nextLogId = auctionService.loadLogOrSnapshotNextId(NEXT_LOG_FILE, logAndSnapshotLoader);
+//            List<Log> logs = auctionService.loadLogs(nextLogId.getId(), logAndSnapshotLoader);
+//
+//            NextId nextSnapshotId = auctionService.loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logAndSnapshotLoader);
+//            List<AuctionData> snapshot = auctionService.loadSnapshot(logAndSnapshotLoader, nextSnapshotId.getId());
+//
+//            auctionService.saveAuctions(snapshot, serverConfig.getPort());
+//            executeLogs(serverConfig, logs, snapshot);
+//        });
+//    }
 
     private void executeLogs(ServerConfigs serverConfigs, List<Log> logs, List<AuctionData> snapshot) {
 
@@ -152,11 +152,16 @@ public class AuctionServer {
     public static void main(String[] args) {
 
         AuctionServer auctionServer = new AuctionServer();
+
+        Map<String, String> stringStringMap = auctionServer.generateHashTable();
+
+        System.out.println(stringStringMap.size());
+
         BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
 
         System.out.println(serversMap);
 
-        auctionServer.processLogs(serversMap);
+//        auctionServer.processLogs(serversMap);
 
         serversMap.forEach((server, serverConfig) -> {
             try {

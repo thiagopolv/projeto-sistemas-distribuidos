@@ -71,6 +71,17 @@ message VerifyAuctionResponse {
     bool hasAuction = 1;
 }
 
+message SaveBidRequest {
+    string id = 1;
+    double bid = 2;
+    string username = 3;
+    int32 hashTableId = 4;
+}
+
+message SaveBidResponse {
+    bool success = 1;
+}
+
 service AuctionService {
     rpc auction (AuctionRequest) returns (AuctionResponse);
 
@@ -79,5 +90,6 @@ service AuctionService {
     rpc sendBid (SendBidRequest) returns (SendBidResponse);
     rpc getAuctionsIds(GetAuctionsIdsRequest) returns (GetAuctionsIdsResponse);
     rpc createAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
+    rpc saveBid(SaveBidRequest) returns (SaveBidResponse);
 }
 

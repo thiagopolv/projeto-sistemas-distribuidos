@@ -13,16 +13,14 @@ import server.AuctionServiceGrpc.AuctionServiceImplBase;
 import util.JsonLoader;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static domain.LogFunctions.SEND_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
+import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static server.AuctionServiceGrpc.newBlockingStub;
@@ -91,36 +89,75 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     @Override
     public void sendBid(SendBidRequest sendBidRequest, StreamObserver<SendBidResponse> responseObserver) {
         List<Boolean> successes = new ArrayList<>();
+        AtomicReference<SaveBidResponse> response = new AtomicReference<>();
         BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap;
+
+        String id = sendBidRequest.getId();
+        Map<String, String> hashTable = generateHashTable();
+
+        hashTable.entrySet().forEach(data -> {
+            if (id.compareTo(data.getValue()) > 0 || data.getValue().equals(hashTable.size() - 1)) {
+                response.set(saveBidInThisServer(sendBidRequest, parseInt(data.getKey())));
+            }
+        });
 
         List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
 
-        new Thread(() -> saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), serverConfigs.getPort(), auctionsData)).start();
-
+//        new Thread(() -> saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), serverConfigs.getPort(), auctionsData)).start();
+//
 //        saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), sendBidRequest.getPort(), auctionsData,
 //                sendBidRequest.getIsServer(), sendBidRequest.getIsProcessLogs());
-
-        successes.add(updateBidIfPresentLocally(auctionsData, sendBidRequest.getId(), sendBidRequest.getBid(),
-                sendBidRequest.getPort(), sendBidRequest.getUsername()));
-
-        if (!sendBidRequest.getIsServer()) {
-            stubsIdsMap = getServersIdsMap(sendBidRequest.getPort());
-            stubsIdsMap.forEach((stub, ids) -> {
-                if (ids.getIdsInServer().contains(sendBidRequest.getId())) {
-                    SendBidResponse response = stub.sendBid(buildSendBidRequest(ids.getPort(), sendBidRequest.getBid(),
-                            sendBidRequest.getId(), sendBidRequest.getUsername()));
-                    successes.add(response.getSuccess());
-                }
-            });
-        }
+//
+//        successes.add(updateBidIfPresentLocally(auctionsData, sendBidRequest.getId(), sendBidRequest.getBid(),
+//                sendBidRequest.getPort(), sendBidRequest.getUsername()));
+//
+//        if (!sendBidRequest.getIsServer()) {
+//            stubsIdsMap = getServersIdsMap(sendBidRequest.getPort());
+//            stubsIdsMap.forEach((stub, ids) -> {
+//                if (ids.getIdsInServer().contains(sendBidRequest.getId())) {
+//                    SendBidResponse response = stub.sendBid(buildSendBidRequest(ids.getPort(), sendBidRequest.getBid(),
+//                            sendBidRequest.getId(), sendBidRequest.getUsername()));
+//                    successes.add(response.getSuccess());
+//                }
+//            });
+//        }
 
         SendBidResponse sendBidResponse = SendBidResponse.newBuilder()
-                .setSuccess(isSuccessfulUpdate(successes))
+                .setSuccess(response.get().getSuccess())
                 .build();
 
         System.out.println(sendBidResponse.getSuccess());
         responseObserver.onNext(sendBidResponse);
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void saveBid(SaveBidRequest saveBidRequest, StreamObserver<SaveBidResponse> responseObserver) {
+
+        List<AuctionData> auctionsData = loadAuctions(SERVER_PORT + saveBidRequest.getHashTableId());
+        Optional<AuctionData> auction = getAuctionById(auctionsData, saveBidRequest.getId());
+
+        auction.ifPresent(auctionData -> {
+            auctionData.getCurrentBidInfo().setValue(saveBidRequest.getBid());
+            auctionData.getCurrentBidInfo().setUsername(saveBidRequest.getUsername());
+        });
+
+        SaveBidResponse saveBidResponse = buildSaveBidResponse(auction);
+
+        responseObserver.onNext(saveBidResponse);
+        responseObserver.onCompleted();
+    }
+
+    private SaveBidResponse buildSaveBidResponse(Optional<AuctionData> auction) {
+        return SaveBidResponse.newBuilder()
+                    .setSuccess(auction.isPresent())
+                    .build();
+    }
+
+    private SaveBidResponse saveBidInThisServer(SendBidRequest sendBidRequest, Integer hashTableId) {
+        AuctionServiceBlockingStub stub =
+                buildAuctionServerStub(buildChannel(getServerHost(), SERVER_PORT + hashTableId));
+        return stub.saveBid(buildSaveBidRequest(sendBidRequest, hashTableId));
     }
 
     //TODO: Fix snapshots
@@ -205,6 +242,33 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             }
         }
         return serverConfigs.getPort();
+    }
+
+    private SaveBidRequest buildSaveBidRequest(SendBidRequest sendBidRequest, Integer hashTableId) {
+        return SaveBidRequest.newBuilder()
+                .setBid(sendBidRequest.getBid())
+                .setId(sendBidRequest.getId())
+                .setUsername(sendBidRequest.getUsername())
+                .setHashTableId(hashTableId)
+                .build();
+    }
+
+    private Map<String, String> generateHashTable() {
+        List<String> list = generateIdList();
+
+        Map<String, String> hashTable = new HashMap<>();
+        list.forEach(obj -> hashTable.put(String.valueOf(hashTable.size()), obj));
+
+        return hashTable;
+    }
+
+    private List<String> generateIdList() {
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
+            list.add(generateSha1Hash(String.valueOf(i)));
+        }
+        list.sort(Comparator.comparing(String::toLowerCase));
+        return list;
     }
 
     private List<Auction> removeRepeatedDataFromAuctionList(List<Auction> auctions) {
@@ -302,39 +366,39 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
-    private BidiMap<AuctionServiceBlockingStub, ServerInfo> getServersIdsMap(
-            Integer port) {
-        BidiMap<Integer, AuctionServiceBlockingStub> stubs = buildStubsMap(port);
-        BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap = new DualHashBidiMap<>();
-
-        stubs.forEach((serverPort, stub) -> {
-            List<Integer> stubIds = stub.getAuctionsIds(buildGetAuctionIdsRequest(serverPort)).getIdsList();
-            stubsIdsMap.put(stub, new ServerInfo(serverPort, stubIds));
-        });
-        return stubsIdsMap;
-    }
+//    private BidiMap<AuctionServiceBlockingStub, ServerInfo> getServersIdsMap(
+//            Integer port) {
+//        BidiMap<Integer, AuctionServiceBlockingStub> stubs = buildStubsMap(port);
+//        BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap = new DualHashBidiMap<>();
+//
+//        stubs.forEach((serverPort, stub) -> {
+//            List<Integer> stubIds = stub.getAuctionsIds(buildGetAuctionIdsRequest(serverPort)).getIdsList();
+//            stubsIdsMap.put(stub, new ServerInfo(serverPort, stubIds));
+//        });
+//        return stubsIdsMap;
+//    }
 
     private static GetAuctionsIdsRequest buildGetAuctionIdsRequest() {
         return GetAuctionsIdsRequest.newBuilder().build();
     }
 
-    private Boolean updateBidIfPresentLocally(List<AuctionData> auctionsData, String id, Double newBid,
-                                              Integer port, String username) {
-
-        Boolean success = null;
-        AuctionData auctionToChange = getAuctionById(auctionsData, id);
-
-        if (auctionToChange != null) {
-            success = FALSE;
-            if (isValidBid(auctionToChange.getCurrentBidInfo().getValue(), newBid)) {
-                auctionToChange.getCurrentBidInfo().setValue(newBid);
-                auctionToChange.getCurrentBidInfo().setUsername(username);
-                saveAuctions(auctionsData, port);
-                success = TRUE;
-            }
-        }
-        return success;
-    }
+//    private Boolean updateBidIfPresentLocally(List<AuctionData> auctionsData, String id, Double newBid,
+//                                              Integer port, String username) {
+//
+//        Boolean success = null;
+//        AuctionData auctionToChange = getAuctionById(auctionsData, id);
+//
+//        if (auctionToChange != null) {
+//            success = FALSE;
+//            if (isValidBid(auctionToChange.getCurrentBidInfo().getValue(), newBid)) {
+//                auctionToChange.getCurrentBidInfo().setValue(newBid);
+//                auctionToChange.getCurrentBidInfo().setUsername(username);
+//                saveAuctions(auctionsData, port);
+//                success = TRUE;
+//            }
+//        }
+//        return success;
+//    }
 
     List<AuctionData> loadSnapshot(JsonLoader jsonLoader, Integer sufix) {
         return new ArrayList<>(jsonLoader.loadList(format(SNAPSHOT_FILE_NAME_FORMAT, sufix), AuctionData.class));
@@ -342,7 +406,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     private List<AuctionData> loadAuctions(Integer port) {
         JsonLoader jsonLoader = new JsonLoader("src/main/data");
-        return new ArrayList<>(jsonLoader.loadList("auctions" + (port - SERVER_PORT) + ".json",
+        return new ArrayList<>(jsonLoader.loadList( String.format(AUCTIONS_FILE_NAME_PATTERN, port - SERVER_PORT),
                 AuctionData.class));
     }
 
@@ -433,13 +497,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 Log.class));
     }
 
-    private AuctionData getAuctionById(List<AuctionData> list, String id) {
+    private Optional<AuctionData> getAuctionById(List<AuctionData> list, String id) {
 
         return list.stream()
                 .filter(auction -> auction.getId().equals(id))
-                .findAny()
-                .orElse(null);
-
+                .findAny();
     }
 
     private Boolean isValidBid(Double currentBid, Double newBid) {
@@ -486,5 +548,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return forAddress(host, port)
                 .usePlaintext()
                 .build();
+    }
+
+    public static void main(String[] args) {
+        AuctionServiceImpl auctionService = new AuctionServiceImpl();
+
     }
 }
