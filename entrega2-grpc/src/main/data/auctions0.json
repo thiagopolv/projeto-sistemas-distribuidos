@@ -1,11 +1,22 @@
 [ {
-  "id" : 57,
+  "id" : "abc",
   "owner" : "rodrigo",
   "product" : "asd",
   "initialValue" : 1.0,
   "currentBidInfo" : {
-    "value" : 2.0,
-    "username" : "rodrigo"
+    "value" : 6.0,
+    "username" : "eu"
+  },
+  "finishTime" : "2019-11-25T00:27:35.606198100",
+  "status" : null
+},{
+  "id" : "p",
+  "owner" : "rodrigo",
+  "product" : "asd",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 6.0,
+    "username" : "eu"
   },
   "finishTime" : "2019-11-25T00:27:35.606198100",
   "status" : null
