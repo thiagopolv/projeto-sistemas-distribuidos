@@ -103,8 +103,8 @@
   "product" : "arroz",
   "initialValue" : 1.0,
   "currentBidInfo" : {
-    "value" : 1.0,
-    "username" : ""
+    "value" : 5.0,
+    "username" : "eu"
   },
   "finishTime" : "2019-12-07T08:37:28.434",
   "status" : null

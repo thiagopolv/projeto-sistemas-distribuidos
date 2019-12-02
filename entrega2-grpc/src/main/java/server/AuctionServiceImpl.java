@@ -95,8 +95,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         String id = sendBidRequest.getId();
         Map<String, String> hashTable = generateHashTable();
 
-        hashTable.forEach((key, value)
-                -> saveBidIfServerHasId(sendBidRequest, response, id, hashTable.size(), Integer.valueOf(key), value));
+        hashTable.forEach((key, value) ->  {
+            if (nonNull(response.get())) {
+                saveBidIfServerHasId(sendBidRequest, response, id, hashTable.size(), Integer.valueOf(key), value)
+            }
+        });
 
 
 //        List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
@@ -161,8 +164,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         }
 
         String finalId = id;
-        hashTable.forEach((key, value)
-                -> saveAuctionIfServerHasId(createAuctionRequest, response, finalId, hashTable.size(), Integer.valueOf(key), value));
+        hashTable.forEach((key, value) -> {
+            if (nonNull(response.get())) {
+                saveAuctionIfServerHasId(createAuctionRequest, response, finalId, hashTable.size(), Integer.valueOf(key), value);
+            }
+        });
 
 
 //        new Thread(() -> saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper, nextId),
@@ -224,21 +230,17 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private void saveBidIfServerHasId(SendBidRequest sendBidRequest, AtomicReference<SaveBidResponse> response,
-                                      String id, Integer size, Integer key, String serverHash) {
-        if (nonNull(response.get())) {
-            return;
-        } else if (id.compareTo(serverHash) < 0 ) {
+                                      String id, Integer hashTableSize, Integer key, String serverHash) {
+        if (id.compareTo(serverHash) < 0 ) {
             response.set(saveBidInThisServer(sendBidRequest, key));
-        } else if (key.equals(size - 1)) {
+        } else if (key.equals(hashTableSize - 1)) {
             response.set(saveBidInThisServer(sendBidRequest, 0));
         }
     }
 
     private void saveAuctionIfServerHasId(CreateAuctionRequest createAuctionRequest, AtomicReference<SaveAuctionResponse> response,
                                           String id, Integer hashTableSize, Integer key, String serverHash) {
-        if (nonNull(response.get())) {
-            return;
-        } else if (id.compareTo(serverHash) < 0) {
+        if (id.compareTo(serverHash) < 0) {
             response.set(saveAuctionInThisServer(createAuctionRequest, key));
         } else if (key.equals(hashTableSize - 1)) {
             response.set(saveAuctionInThisServer(createAuctionRequest, 0));
@@ -608,7 +610,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         AuctionServiceImpl auctionService = new AuctionServiceImpl();
 
         auctionService.sendBid(SendBidRequest.newBuilder()
-                .setId("q")
+                .setId("1")
                 .setBid(5.0)
                 .setUsername("eu")
                 .build(), new StreamObserver<SendBidResponse>() {
