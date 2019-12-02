@@ -1,5 +1,5 @@
 [ {
-  "id" : 57,
+  "id" : "57",
   "owner" : "rodrigo",
   "product" : "asd",
   "initialValue" : 1.0,
@@ -8,5 +8,27 @@
     "username" : "rodrigo"
   },
   "finishTime" : "2019-11-25T00:27:35.606198100",
+  "status" : null
+}, {
+  "id" : "a",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 1.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-12-07T08:36:20.037",
+  "status" : null
+}, {
+  "id" : "b",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 1.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-12-07T08:39:04.632",
   "status" : null
 } ]

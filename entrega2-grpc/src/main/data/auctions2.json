@@ -1,1 +1,12 @@
-[ ]
+[ {
+  "id" : "c",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 1.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-12-07T08:39:35.902",
+  "status" : null
+} ]
