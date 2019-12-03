@@ -52,17 +52,6 @@ message CreateAuctionResponse {
     Auction auction = 2;
 }
 
-
-message AuctionRequest {
-    string action = 1;
-    string data = 2;
-}
-
-message AuctionResponse {
-    string action = 1;
-    string data = 2;
-}
-
 message VerifyAuctionRequest {
     string id = 1;
 }
@@ -91,10 +80,17 @@ message SaveAuctionResponse {
     bool success = 1;
 }
 
-service AuctionService {
-    rpc auction (AuctionRequest) returns (AuctionResponse);
+message GetLocalAuctionsRequest {
+    int32 hashTableId = 1;
+}
 
+message GetLocalAuctionsResponse {
+    repeated Auction auctions = 1;
+}
+
+service AuctionService {
     rpc getAuctions (GetAuctionsRequest) returns (GetAuctionsResponse);
+    rpc getLocalAuctions(GetLocalAuctionsRequest) returns (GetLocalAuctionsResponse);
     rpc verifyAuctionOnOtherServers (VerifyAuctionRequest) returns (VerifyAuctionResponse);
     rpc sendBid (SendBidRequest) returns (SendBidResponse);
     rpc getAuctionsIds(GetAuctionsIdsRequest) returns (GetAuctionsIdsResponse);
