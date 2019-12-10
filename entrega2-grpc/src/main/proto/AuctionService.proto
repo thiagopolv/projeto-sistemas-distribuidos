@@ -76,6 +76,7 @@ message SaveAuctionRequest {
     Auction auction = 1;
     int32 hashTableId = 2;
     bool processingLogs = 3;
+    string auctionId = 4;
 }
 
 message SaveAuctionResponse {
