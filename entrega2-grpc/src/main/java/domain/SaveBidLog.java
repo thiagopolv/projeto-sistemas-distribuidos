@@ -1,18 +1,20 @@
 package domain;
 
-public class SendBidLog {
+public class SaveBidLog {
 
     private String id;
     private Double bid;
     private String username;
+    private Integer hashTableId;
 
-    public SendBidLog() {
+    public SaveBidLog() {
     }
 
-    public SendBidLog(String id, Double bid, String username) {
+    public SaveBidLog(String id, Double bid, String username, Integer hashTableId) {
         this.id = id;
         this.bid = bid;
         this.username = username;
+        this.hashTableId = hashTableId;
     }
 
     public String getId() {
@@ -37,5 +39,13 @@ public class SendBidLog {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public Integer getHashTableId() {
+        return hashTableId;
+    }
+
+    public void setHashTableId(Integer hashTableId) {
+        this.hashTableId = hashTableId;
     }
 }

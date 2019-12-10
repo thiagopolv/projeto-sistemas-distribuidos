@@ -1,9 +1,8 @@
 package server;
 
-import domain.CreateAuctionLog;
+import domain.SaveAuctionLog;
 import domain.Log;
-import domain.NextId;
-import domain.SendBidLog;
+import domain.SaveBidLog;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -13,7 +12,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import util.JsonLoader;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -122,16 +120,16 @@ public class AuctionServer {
         logs.forEach(log -> {
             switch (log.getFunction()) {
                 case CREATE_AUCTION:
-                    serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log.getLogData().getCreateAuctionData()));
+                    serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log.getLogData().getSaveAuctionData()));
                     break;
                 case SEND_BID:
-                    serverConfigs.getStub().sendBid(buildSendBidRequestFromLog(log.getLogData().getSendBidData()));
+                    serverConfigs.getStub().sendBid(buildSendBidRequestFromLog(log.getLogData().getSaveBidData()));
                     break;
             }
         });
     }
 
-    private CreateAuctionRequest buildCreateAuctionRequestFromLog(CreateAuctionLog log) {
+    private CreateAuctionRequest buildCreateAuctionRequestFromLog(SaveAuctionLog log) {
 
         AuctionMapper auctionMapper = new AuctionMapper();
 
@@ -140,7 +138,7 @@ public class AuctionServer {
                 .build();
     }
 
-    private SendBidRequest buildSendBidRequestFromLog(SendBidLog log) {
+    private SendBidRequest buildSendBidRequestFromLog(SaveBidLog log) {
 
         return SendBidRequest.newBuilder()
                 .setUsername(log.getUsername())

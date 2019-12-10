@@ -2,38 +2,38 @@ package domain;
 
 public class LogData {
 
-    private CreateAuctionLog createAuctionData;
-    private SendBidLog sendBidData;
+    private SaveAuctionLog saveAuctionData;
+    private SaveBidLog saveBidData;
 
     public LogData() {
     }
 
-    public LogData(CreateAuctionLog createAuctionData, SendBidLog sendBidData) {
-        this.createAuctionData = createAuctionData;
-        this.sendBidData = sendBidData;
+    public LogData(SaveAuctionLog saveAuctionData, SaveBidLog saveBidData) {
+        this.saveAuctionData = saveAuctionData;
+        this.saveBidData = saveBidData;
     }
 
-    public LogData(CreateAuctionLog createAuctionData) {
-        this.createAuctionData = createAuctionData;
+    public LogData(SaveAuctionLog saveAuctionData) {
+        this.saveAuctionData = saveAuctionData;
     }
 
-    public LogData(SendBidLog sendBidData) {
-        this.sendBidData = sendBidData;
+    public LogData(SaveBidLog saveBidData) {
+        this.saveBidData = saveBidData;
     }
 
-    public CreateAuctionLog getCreateAuctionData() {
-        return createAuctionData;
+    public SaveAuctionLog getSaveAuctionData() {
+        return saveAuctionData;
     }
 
-    public void setCreateAuctionData(CreateAuctionLog createAuctionData) {
-        this.createAuctionData = createAuctionData;
+    public void setSaveAuctionData(SaveAuctionLog saveAuctionData) {
+        this.saveAuctionData = saveAuctionData;
     }
 
-    public SendBidLog getSendBidData() {
-        return sendBidData;
+    public SaveBidLog getSaveBidData() {
+        return saveBidData;
     }
 
-    public void setSendBidData(SendBidLog sendBidData) {
-        this.sendBidData = sendBidData;
+    public void setSaveBidData(SaveBidLog saveBidData) {
+        this.saveBidData = saveBidData;
     }
 }

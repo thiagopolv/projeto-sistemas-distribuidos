@@ -5,8 +5,10 @@ import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import mapper.AuctionData;
 import mapper.AuctionMapper;
+
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
 import server.AuctionServiceGrpc.AuctionServiceImplBase;
 import util.JsonLoader;
@@ -16,6 +18,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static domain.LogFunctions.CREATE_AUCTION;
+import static domain.LogFunctions.SEND_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -56,7 +60,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getAuctions(GetAuctionsRequest getAuctionsRequest,
-                            StreamObserver<GetAuctionsResponse> responseObserver) {
+            StreamObserver<GetAuctionsResponse> responseObserver) {
         Map<String, String> hashTable = generateHashTable();
         List<Auction> auctions = new ArrayList<>();
 //        List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
@@ -96,7 +100,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getLocalAuctions(GetLocalAuctionsRequest getLocalAuctionsRequest,
-                                 StreamObserver<GetLocalAuctionsResponse> responseObserver) {
+            StreamObserver<GetLocalAuctionsResponse> responseObserver) {
 
         AuctionMapper mapper = new AuctionMapper();
 
@@ -128,10 +132,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
 //        List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
 
-//        new Thread(() -> saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), serverConfigs.getPort(), auctionsData)).start();
-//
-//        saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), sendBidRequest.getPort(), auctionsData,
-//                sendBidRequest.getIsServer(), sendBidRequest.getIsProcessLogs());
+//        new Thread(() -> saveLogs(SEND_BID, buildSendBidLog(sendBidRequest), serverConfigs.getPort(), auctionsData)).start();/
+
 //
 //        successes.add(updateBidIfPresentLocally(auctionsData, sendBidRequest.getId(), sendBidRequest.getBid(),
 //                sendBidRequest.getPort(), sendBidRequest.getUsername()));
@@ -162,6 +164,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         List<AuctionData> auctionsData = loadAuctions(saveBidRequest.getHashTableId());
         Optional<AuctionData> auction = getAuctionById(auctionsData, saveBidRequest.getId());
 
+        if (!saveBidRequest.getProcessingLogs()) {
+            saveLogs(SEND_BID, buildSaveBidLog(saveBidRequest), saveBidRequest.getHashTableId(), auctionsData);
+        }
+
         auction.ifPresent(auctionData -> {
             auctionData.getCurrentBidInfo().setValue(saveBidRequest.getBid());
             auctionData.getCurrentBidInfo().setUsername(saveBidRequest.getUsername());
@@ -178,7 +184,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     //TODO: Fix snapshots
     @Override
     public void createAuction(CreateAuctionRequest createAuctionRequest,
-                              StreamObserver<CreateAuctionResponse> responseObserver) {
+            StreamObserver<CreateAuctionResponse> responseObserver) {
         AtomicReference<SaveAuctionResponse> response = new AtomicReference<>();
         String id = createAuctionRequest.getAuction().getId();
         Map<String, String> hashTable = generateHashTable();
@@ -190,14 +196,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         String finalId = id;
         hashTable.forEach((key, value) -> {
             if (nonNull(response.get())) {
-                saveAuctionIfServerHasId(createAuctionRequest, response, finalId, hashTable.size(), Integer.valueOf(key), value);
+                saveAuctionIfServerHasId(createAuctionRequest, response, finalId, hashTable.size(),
+                        Integer.valueOf(key), value);
             }
         });
-
-
-//        new Thread(() -> saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper, nextId),
-//                createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer(),
-//                createAuctionRequest.getIsProcessLogs()));
 
 //        saveLogs(CREATE_AUCTION, buildCreateAuctionLog(createAuctionRequest, auctionMapper, nextId),
 //                createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer(), createAuctionRequest.getIsProcessLogs());
@@ -214,6 +216,12 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     public void saveAuction(SaveAuctionRequest request, StreamObserver<SaveAuctionResponse> responseObserver) {
         AuctionMapper auctionMapper = new AuctionMapper();
         SaveAuctionResponse response;
+
+        if (!request.getProcessingLogs()) {
+            saveLogs(CREATE_AUCTION, buildSaveAuctionLog(request, auctionMapper, request.getId),
+                    createAuctionRequest.getPort(), null, createAuctionRequest.getIsServer(),
+                    createAuctionRequest.getIsProcessLogs());
+        }
 
         try {
             List<AuctionData> auctionList = loadAuctions(request.getHashTableId());
@@ -236,7 +244,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getAuctionsIds(GetAuctionsIdsRequest getAuctionsIdsRequest,
-                               StreamObserver<GetAuctionsIdsResponse> responseObserver) {
+            StreamObserver<GetAuctionsIdsResponse> responseObserver) {
 
         List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
         List<String> ids = auctionsData.stream()
@@ -254,7 +262,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private void saveBidIfServerHasId(SendBidRequest sendBidRequest, AtomicReference<SaveBidResponse> response,
-                                      String id, Integer hashTableSize, Integer key, String serverHash) {
+            String id, Integer hashTableSize, Integer key, String serverHash) {
         if (id.compareTo(serverHash) < 0) {
             response.set(saveBidInThisServer(sendBidRequest, key));
         } else if (key.equals(hashTableSize - 1)) {
@@ -262,8 +270,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         }
     }
 
-    private void saveAuctionIfServerHasId(CreateAuctionRequest createAuctionRequest, AtomicReference<SaveAuctionResponse> response,
-                                          String id, Integer hashTableSize, Integer key, String serverHash) {
+    private void saveAuctionIfServerHasId(CreateAuctionRequest createAuctionRequest,
+            AtomicReference<SaveAuctionResponse> response,
+            String id, Integer hashTableSize, Integer key, String serverHash) {
         if (id.compareTo(serverHash) < 0) {
             response.set(saveAuctionInThisServer(createAuctionRequest, key));
         } else if (key.equals(hashTableSize - 1)) {
@@ -286,7 +295,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return response;
     }
 
-    private SaveAuctionResponse saveAuctionInThisServer(CreateAuctionRequest createAuctionRequest, Integer hashTableId) {
+    private SaveAuctionResponse saveAuctionInThisServer(CreateAuctionRequest createAuctionRequest,
+            Integer hashTableId) {
         ManagedChannel channel = buildChannel(getServerHost(), SERVER_PORT + hashTableId);
         AuctionServiceBlockingStub stub = buildAuctionServerStub(channel);
         SaveAuctionResponse response = stub.saveAuction(buildSaveAuctionRequest(createAuctionRequest, hashTableId));
@@ -383,17 +393,6 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return TRUE;
     }
 
-    private boolean saveAuctionInOtherServers(AuctionData auctionData, Integer originPort) {
-        AuctionMapper auctionMapper = new AuctionMapper();
-
-        Auction auctionToSave = auctionMapper.auctionFromAuctionData(auctionData);
-
-        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, originPort));
-        CreateAuctionResponse response = stub.createAuction(buildCreateAuctionRequest(auctionToSave));
-
-        return response.getSuccess();
-    }
-
     private CreateAuctionRequest buildCreateAuctionRequest(Auction auction) {
         return CreateAuctionRequest.newBuilder()
                 .setAuction(auction)
@@ -406,24 +405,25 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
-    private LogData buildCreateAuctionLog(CreateAuctionRequest createAuctionRequest,
-                                          AuctionMapper auctionMapper, String nextId) {
-        CreateAuctionLog createLog = new CreateAuctionLog();
+    private LogData buildSaveAuctionLog(SaveAuctionRequest saveAuctionRequest,
+            AuctionMapper auctionMapper, String id) {
+        SaveAuctionLog createLog = new SaveAuctionLog();
 
-        createLog.setAuction(auctionMapper.auctionDataFromAuction(createAuctionRequest.getAuction()));
-        createLog.getAuction().setId(nextId);
+        createLog.setAuction(auctionMapper.auctionDataFromAuction(saveAuctionRequest.getAuction()));
+        createLog.getAuction().setId(id);
 
         return new LogData(createLog);
     }
 
-    private LogData buildSendBidLog(SendBidRequest sendBidRequest) {
-        SendBidLog sendBidLog = new SendBidLog();
+    private LogData buildSaveBidLog(SaveBidRequest sendBidRequest) {
+        SaveBidLog saveBidLog = new SaveBidLog();
 
-        sendBidLog.setBid(sendBidRequest.getBid());
-        sendBidLog.setId(sendBidRequest.getId());
-        sendBidLog.setUsername(sendBidRequest.getUsername());
+        saveBidLog.setBid(sendBidRequest.getBid());
+        saveBidLog.setId(sendBidRequest.getId());
+        saveBidLog.setUsername(sendBidRequest.getUsername());
+        saveBidLog.setHashTableId(sendBidRequest.getHashTableId());
 
-        return new LogData(sendBidLog);
+        return new LogData(saveBidLog);
     }
 
     private boolean isSuccessfulUpdate(List<Boolean> successes) {
@@ -446,39 +446,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
-//    private BidiMap<AuctionServiceBlockingStub, ServerInfo> getServersIdsMap(
-//            Integer port) {
-//        BidiMap<Integer, AuctionServiceBlockingStub> stubs = buildStubsMap(port);
-//        BidiMap<AuctionServiceBlockingStub, ServerInfo> stubsIdsMap = new DualHashBidiMap<>();
-//
-//        stubs.forEach((serverPort, stub) -> {
-//            List<Integer> stubIds = stub.getAuctionsIds(buildGetAuctionIdsRequest(serverPort)).getIdsList();
-//            stubsIdsMap.put(stub, new ServerInfo(serverPort, stubIds));
-//        });
-//        return stubsIdsMap;
-//    }
-
     private static GetAuctionsIdsRequest buildGetAuctionIdsRequest() {
         return GetAuctionsIdsRequest.newBuilder().build();
     }
-
-//    private Boolean updateBidIfPresentLocally(List<AuctionData> auctionsData, String id, Double newBid,
-//                                              Integer port, String username) {
-//
-//        Boolean success = null;
-//        AuctionData auctionToChange = getAuctionById(auctionsData, id);
-//
-//        if (auctionToChange != null) {
-//            success = FALSE;
-//            if (isValidBid(auctionToChange.getCurrentBidInfo().getValue(), newBid)) {
-//                auctionToChange.getCurrentBidInfo().setValue(newBid);
-//                auctionToChange.getCurrentBidInfo().setUsername(username);
-//                saveAuctions(auctionsData, port);
-//                success = TRUE;
-//            }
-//        }
-//        return success;
-//    }
 
     List<AuctionData> loadSnapshot(JsonLoader jsonLoader, Integer sufix) {
         return new ArrayList<>(jsonLoader.loadList(format(SNAPSHOT_FILE_NAME_FORMAT, sufix), AuctionData.class));
@@ -510,16 +480,17 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, hashTableId), auctionsToSave);
     }
 
-    private void saveLogs(@SuppressWarnings("SameParameterValue") LogFunctions function, LogData request, Integer port, Object data) {
+    private void saveLogs(@SuppressWarnings("SameParameterValue") LogFunctions function, LogData request,
+            Integer hashTableId, Object data) {
 
         JsonLoader logsAndSnapshotsLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
-                port - SERVER_PORT));
+                hashTableId));
 
         NextId nextLog = loadLogOrSnapshotNextId(NEXT_LOG_FILE, logsAndSnapshotsLoader);
         NextId nextSnapshot = loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logsAndSnapshotsLoader);
         List<Log> logs = loadLogs(nextLog.getId(), logsAndSnapshotsLoader);
         alternateNextIdsAndCreateSnapshotIfLogIsFull(logs, nextLog, nextSnapshot, logsAndSnapshotsLoader, data,
-                port);
+                hashTableId);
 
         logs.add(new Log(function, request));
         logsAndSnapshotsLoader.saveFile(format(LOGS_FILE_NAME_PATTERN, nextLog.getId()), logs);
@@ -558,7 +529,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private void alternateNextIdsAndCreateSnapshotIfLogIsFull(List<Log> logs, NextId nextLog, NextId nextSnapshot,
-                                                              JsonLoader logsAndSnapshotsLoader, Object data, Integer port) {
+            JsonLoader logsAndSnapshotsLoader, Object data, Integer port) {
         if (logFileIsFull(logs)) {
             alternateLogFile(logsAndSnapshotsLoader, nextLog);
             alternateSnapshotFile(logsAndSnapshotsLoader, nextSnapshot);

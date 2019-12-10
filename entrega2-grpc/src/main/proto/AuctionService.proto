@@ -65,6 +65,7 @@ message SaveBidRequest {
     double bid = 2;
     string username = 3;
     int32 hashTableId = 4;
+    bool processingLogs = 5;
 }
 
 message SaveBidResponse {
@@ -74,6 +75,7 @@ message SaveBidResponse {
 message SaveAuctionRequest {
     Auction auction = 1;
     int32 hashTableId = 2;
+    bool processingLogs = 3;
 }
 
 message SaveAuctionResponse {

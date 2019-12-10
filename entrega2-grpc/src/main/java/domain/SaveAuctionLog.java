@@ -2,11 +2,11 @@ package domain;
 
 import mapper.AuctionData;
 
-public class CreateAuctionLog {
+public class SaveAuctionLog {
 
     private AuctionData auction;
 
-    public CreateAuctionLog() {
+    public SaveAuctionLog() {
     }
 
     public AuctionData getAuction() {
