@@ -195,14 +195,14 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         String finalId = id;
         hashTable.forEach((hashIndex, hash) -> {
-            if (nonNull(response.get())) {
+            if (isNull(response.get())) {
                 saveAuctionIfServerHasId(createAuctionRequest, response, finalId, hashTable.size(),
                         Integer.valueOf(hashIndex), hash);
             }
         });
 
         CreateAuctionResponse createAuctionResponse =
-                buildCreateAuctionResponse(createAuctionRequest.getAuction(), response.get().getSuccess());
+                buildCreateAuctionResponse(buildAuctionWithId(createAuctionRequest.getAuction(), finalId), response.get().getSuccess());
 
         responseObserver.onNext(createAuctionResponse);
         responseObserver.onCompleted();
@@ -411,11 +411,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private LogData buildSaveAuctionLog(SaveAuctionRequest saveAuctionRequest,
-                                        AuctionMapper auctionMapper, String id) {
+                                        AuctionMapper auctionMapper, String auctionId) {
         SaveAuctionLog createLog = new SaveAuctionLog();
 
         createLog.setAuction(auctionMapper.auctionDataFromAuction(saveAuctionRequest.getAuction()));
-        createLog.getAuction().setId(id);
+        createLog.getAuction().setId(auctionId);
 
         return new LogData(createLog);
     }
@@ -725,21 +725,21 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                         .setHashTableId(2)
                         .build()
                 , new StreamObserver<GetLocalAuctionsResponse>() {
-            @Override
-            public void onNext(GetLocalAuctionsResponse getLocalAuctionsResponse) {
+                    @Override
+                    public void onNext(GetLocalAuctionsResponse getLocalAuctionsResponse) {
 
-            }
+                    }
 
-            @Override
-            public void onError(Throwable throwable) {
+                    @Override
+                    public void onError(Throwable throwable) {
 
-            }
+                    }
 
-            @Override
-            public void onCompleted() {
+                    @Override
+                    public void onCompleted() {
 
-            }
-        });
+                    }
+                });
 
         auctionService.getAuctions(GetAuctionsRequest.newBuilder().build(), new StreamObserver<GetAuctionsResponse>() {
             @Override
