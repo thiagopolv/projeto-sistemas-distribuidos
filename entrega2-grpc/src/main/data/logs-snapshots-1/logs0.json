@@ -1,1 +1,23 @@
-[ ]
+[ {
+  "function" : "SAVE_BID",
+  "logData" : {
+    "saveAuctionData" : null,
+    "saveBidData" : {
+      "auctionId" : "a",
+      "bid" : 3.0,
+      "username" : "eu",
+      "hashTableId" : 1
+    }
+  }
+}, {
+  "function" : "SAVE_BID",
+  "logData" : {
+    "saveAuctionData" : null,
+    "saveBidData" : {
+      "auctionId" : "ab",
+      "bid" : 5.0,
+      "username" : "eu",
+      "hashTableId" : 1
+    }
+  }
+} ]

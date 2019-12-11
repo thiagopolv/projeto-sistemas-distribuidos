@@ -2,7 +2,7 @@ package domain;
 
 public class SaveBidLog {
 
-    private String id;
+    private String auctionId;
     private Double bid;
     private String username;
     private Integer hashTableId;
@@ -10,19 +10,19 @@ public class SaveBidLog {
     public SaveBidLog() {
     }
 
-    public SaveBidLog(String id, Double bid, String username, Integer hashTableId) {
-        this.id = id;
+    public SaveBidLog(String auctionId, Double bid, String username, Integer hashTableId) {
+        this.auctionId = auctionId;
         this.bid = bid;
         this.username = username;
         this.hashTableId = hashTableId;
     }
 
-    public String getId() {
-        return id;
+    public String getAuctionId() {
+        return auctionId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setAuctionId(String auctionId) {
+        this.auctionId = auctionId;
     }
 
     public Double getBid() {

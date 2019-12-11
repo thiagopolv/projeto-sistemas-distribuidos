@@ -61,7 +61,7 @@ message VerifyAuctionResponse {
 }
 
 message SaveBidRequest {
-    string id = 1;
+    string auctionId = 1;
     double bid = 2;
     string username = 3;
     int32 hashTableId = 4;

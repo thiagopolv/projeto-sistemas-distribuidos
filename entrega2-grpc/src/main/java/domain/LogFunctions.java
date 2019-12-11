@@ -2,6 +2,6 @@ package domain;
 
 public enum LogFunctions {
 
-    CREATE_AUCTION,
-    SEND_BID;
+    SAVE_AUCTION,
+    SAVE_BID;
 }

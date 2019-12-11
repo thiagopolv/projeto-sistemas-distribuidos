@@ -1,5 +1,6 @@
 package server;
 
+import domain.NextId;
 import domain.SaveAuctionLog;
 import domain.Log;
 import domain.SaveBidLog;
@@ -12,12 +13,14 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import util.JsonLoader;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
+import static java.lang.Boolean.TRUE;
 import static java.lang.String.format;
 import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.*;
@@ -97,53 +100,57 @@ public class AuctionServer {
         return server;
     }
 
-//    private void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
-//        AuctionServiceImpl auctionService = new AuctionServiceImpl();
-//
-//        serversMap.forEach((server, serverConfig) -> {
-//            JsonLoader logAndSnapshotLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
-//                    serverConfig.getPort() - SERVER_PORT));
-//
-//            NextId nextLogId = auctionService.loadLogOrSnapshotNextId(NEXT_LOG_FILE, logAndSnapshotLoader);
-//            List<Log> logs = auctionService.loadLogs(nextLogId.getId(), logAndSnapshotLoader);
-//
-//            NextId nextSnapshotId = auctionService.loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logAndSnapshotLoader);
-//            List<AuctionData> snapshot = auctionService.loadSnapshot(logAndSnapshotLoader, nextSnapshotId.getId());
-//
-//            auctionService.saveAuctions(snapshot, serverConfig.getPort());
-//            executeLogs(serverConfig, logs, snapshot);
-//        });
-//    }
+    private void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
+        AuctionServiceImpl auctionService = new AuctionServiceImpl();
+
+        serversMap.forEach((server, serverConfig) -> {
+            JsonLoader logAndSnapshotLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
+                    serverConfig.getPort() - SERVER_PORT));
+
+            NextId nextLogId = auctionService.loadLogOrSnapshotNextId(NEXT_LOG_FILE, logAndSnapshotLoader);
+            List<Log> logs = auctionService.loadLogs(nextLogId.getId(), logAndSnapshotLoader);
+
+            NextId nextSnapshotId = auctionService.loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logAndSnapshotLoader);
+            List<AuctionData> snapshot = auctionService.loadSnapshot(logAndSnapshotLoader, nextSnapshotId.getId());
+
+            auctionService.saveAuctions(snapshot, serverConfig.getPort() - SERVER_PORT);
+            executeLogs(serverConfig, logs, snapshot);
+        });
+    }
 
     private void executeLogs(ServerConfigs serverConfigs, List<Log> logs, List<AuctionData> snapshot) {
 
         logs.forEach(log -> {
             switch (log.getFunction()) {
-                case CREATE_AUCTION:
-                    serverConfigs.getStub().createAuction(buildCreateAuctionRequestFromLog(log.getLogData().getSaveAuctionData()));
+                case SAVE_AUCTION:
+                    serverConfigs.getStub().saveAuction(buildCreateAuctionRequestFromLog(log.getLogData().getSaveAuctionData()));
                     break;
-                case SEND_BID:
-                    serverConfigs.getStub().sendBid(buildSendBidRequestFromLog(log.getLogData().getSaveBidData()));
+                case SAVE_BID:
+                    serverConfigs.getStub().saveBid(buildSendBidRequestFromLog(log.getLogData().getSaveBidData()));
                     break;
             }
         });
     }
 
-    private CreateAuctionRequest buildCreateAuctionRequestFromLog(SaveAuctionLog log) {
+    private SaveAuctionRequest buildCreateAuctionRequestFromLog(SaveAuctionLog log) {
 
         AuctionMapper auctionMapper = new AuctionMapper();
 
-        return CreateAuctionRequest.newBuilder()
+        return SaveAuctionRequest.newBuilder()
                 .setAuction(auctionMapper.auctionFromAuctionData(log.getAuction()))
+                .setProcessingLogs(TRUE)
+                .setHashTableId(log.getHashTableId())
                 .build();
     }
 
-    private SendBidRequest buildSendBidRequestFromLog(SaveBidLog log) {
+    private SaveBidRequest buildSendBidRequestFromLog(SaveBidLog log) {
 
-        return SendBidRequest.newBuilder()
+        return SaveBidRequest.newBuilder()
                 .setUsername(log.getUsername())
                 .setBid(log.getBid())
-                .setId(log.getId())
+                .setAuctionId(log.getAuctionId())
+                .setProcessingLogs(TRUE)
+                .setHashTableId(log.getHashTableId())
                 .build();
     }
 
@@ -151,15 +158,11 @@ public class AuctionServer {
 
         AuctionServer auctionServer = new AuctionServer();
 
-        Map<String, String> stringStringMap = auctionServer.generateHashTable();
-
-        System.out.println(stringStringMap.size());
-
         BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
 
         System.out.println(serversMap);
 
-//        auctionServer.processLogs(serversMap);
+        auctionServer.processLogs(serversMap);
 
         serversMap.forEach((server, serverConfig) -> {
             try {
