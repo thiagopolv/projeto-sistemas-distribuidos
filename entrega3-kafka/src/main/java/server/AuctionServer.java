@@ -26,7 +26,6 @@ import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.*;
 
 public class AuctionServer {
-
     private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
     private static final String SERVER_HOST = getServerHost();
     private static final Integer SERVER_PORT = getServerPort();
