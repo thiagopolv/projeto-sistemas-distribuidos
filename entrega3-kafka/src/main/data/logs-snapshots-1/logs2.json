@@ -1,0 +1,12 @@
+[ {
+  "function" : "SAVE_BID",
+  "logData" : {
+    "saveAuctionData" : null,
+    "saveBidData" : {
+      "auctionId" : "acce",
+      "bid" : 3.0,
+      "username" : "eu",
+      "hashTableId" : 1
+    }
+  }
+} ]
