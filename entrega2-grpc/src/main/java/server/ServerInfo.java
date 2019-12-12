@@ -1,17 +1,20 @@
 package server;
 
 import java.util.List;
+import java.util.Map;
 
 public class ServerInfo {
 
     private Integer port;
     private List<Integer> idsInServer;
+    private Map<String, String> hashTable;
 
     public ServerInfo() {
     }
 
-    public ServerInfo(Integer port) {
+    public ServerInfo(Integer port, Map<String, String> hashTable) {
         this.port = port;
+        this.hashTable = hashTable;
     }
 
     public ServerInfo(List<Integer> idsInServer) {
@@ -45,5 +48,13 @@ public class ServerInfo {
                 "port=" + port +
                 ", idsInServer=" + idsInServer +
                 '}';
+    }
+
+    public Map<String, String> getHashTable() {
+        return hashTable;
+    }
+
+    public void setHashTable(Map<String, String> hashTable) {
+        this.hashTable = hashTable;
     }
 }

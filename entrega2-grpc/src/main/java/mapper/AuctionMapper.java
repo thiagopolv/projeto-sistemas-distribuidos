@@ -1,16 +1,15 @@
 package mapper;
 
 
-import static java.util.Objects.isNull;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import domain.AuctionStatus;
 import server.Auction;
 import server.CurrentBidInfo;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.isNull;
 
 public class AuctionMapper {
 
@@ -29,7 +28,7 @@ public class AuctionMapper {
                         getCurrentBidUsername(auctionData)))
                 .setOwner(auctionData.getOwner())
                 .setFinishTime(auctionData.getFinishTime())
-                .setStatus(LocalDateTime.parse(auctionData.getFinishTime()).isAfter(now) ? GOING_ON  : FINISHED)
+                .setStatus(LocalDateTime.parse(auctionData.getFinishTime()).isAfter(now) ? GOING_ON : FINISHED)
                 .build();
     }
 
@@ -55,17 +54,14 @@ public class AuctionMapper {
     }
 
     public List<Auction> auctionListFromAuctionDataList(List<AuctionData> auctionDataList) {
-
-        List<Auction> list = new ArrayList<>();
-
-        auctionDataList.forEach(data -> {
-            Auction newData = auctionFromAuctionData(data);
-            list.add(newData);
-        });
-
-        return list.stream()
-                .filter(auction -> auction.getStatus() == GOING_ON)
+        return auctionDataList.stream()
+                .map(this::auctionFromAuctionData)
+                .filter(this::auctionStatusIsGoingOn)
                 .collect(Collectors.toList());
+    }
+
+    private boolean auctionStatusIsGoingOn(Auction auction) {
+        return auction.getStatus().equals(GOING_ON);
     }
 
     private String getCurrentBidUsername(AuctionData auctionData) {
@@ -76,7 +72,7 @@ public class AuctionMapper {
         return isNull(auctionData.getCurrentBidInfo().getValue()) ? 0.00 : auctionData.getCurrentBidInfo().getValue();
     }
 
-    private CurrentBidInfo buildCurrentBidInfo(Double value, String username ) {
+    private CurrentBidInfo buildCurrentBidInfo(Double value, String username) {
         return CurrentBidInfo.newBuilder()
                 .setValue(value)
                 .setUsername(username)

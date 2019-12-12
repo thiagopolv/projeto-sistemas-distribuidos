@@ -1,1 +1,45 @@
-[]
+[ {
+  "id" : "a",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 3.0,
+    "username" : "eu"
+  },
+  "finishTime" : "2019-12-15T23:58:39.063",
+  "status" : null
+}, {
+  "id" : "ab",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 5.0,
+    "username" : "eu"
+  },
+  "finishTime" : "2019-12-15T23:58:58.425",
+  "status" : null
+}, {
+  "id" : "acce",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 1.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-12-16T00:18:52.043",
+  "status" : null
+}, {
+  "id" : "abcd",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 1.0,
+    "username" : ""
+  },
+  "finishTime" : "2019-12-16T00:18:54.868",
+  "status" : null
+} ]

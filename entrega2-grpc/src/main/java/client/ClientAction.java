@@ -1,41 +1,17 @@
 package client;
 
-import java.util.EnumMap;
-import java.util.Map;
-
-import org.apache.commons.collections4.BidiMap;
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import java.util.function.Function;
 
 public enum ClientAction {
-    LIST("LIST"),
-    SEND_BID("SEND"),
-    DISCONNECT("DISC"),
-    CREATE("CREATE"),
-    INVALID("");
+    LIST(ClientService::printAuctions),
+    SEND(ClientService::sendBidAndReturnMessage),
+    CREATE(ClientService::createAuctionAndSendMessage),
+    DISCONNECT(ClientService::sendDisconnectAndSendMessage),
+    INVALID(ClientService::sendInvalidActionMessage);
 
-    private String action;
+    public final Function<ClientService, Void> clientActionFunction;
 
-    ClientAction(String action) {
-        this.action = action;
-    }
-
-    public String getAction() {
-        return action;
-    }
-
-    public static BidiMap<ClientAction, String> getEnumMap() {
-        BidiMap<ClientAction, String> enumMap = new DualHashBidiMap<>();
-        enumMap.put(LIST, "LIST");
-        enumMap.put(SEND_BID, "SEND");
-        enumMap.put(DISCONNECT, "DISC");
-        enumMap.put(CREATE, "CREATE");
-        enumMap.put(INVALID, "");
-
-        return enumMap;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(ClientAction.valueOf("REF"));
-
+    ClientAction(Function<ClientService, Void> clientActionFunction) {
+        this.clientActionFunction = clientActionFunction;
     }
 }

@@ -1,15 +1,12 @@
 package mapper;
 
-import static domain.AuctionStatus.GOING_ON;
-
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 import domain.AuctionStatus;
 
 public class AuctionData {
 
-    private Integer id;
+    private String id;
     private String owner;
     private String product;
     private Double initialValue;
@@ -20,7 +17,7 @@ public class AuctionData {
     public AuctionData() {
     }
 
-    public AuctionData(Integer id, String owner, String product, Double initialValue, CurrentBidInfo currentBidInfo,
+    public AuctionData(String id, String owner, String product, Double initialValue, CurrentBidInfo currentBidInfo,
             String finishTime, AuctionStatus status) {
         this.id = id;
         this.owner = owner;
@@ -31,11 +28,11 @@ public class AuctionData {
         this.status = status;
     }
 
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 
