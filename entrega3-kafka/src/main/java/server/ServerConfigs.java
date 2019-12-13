@@ -8,15 +8,8 @@ public class ServerConfigs extends ServerInfo {
 
     private AuctionServiceBlockingStub stub;
 
-    public ServerConfigs() {
-    }
-
-    public ServerConfigs(AuctionServiceBlockingStub stub) {
-        this.stub = stub;
-    }
-
-    public ServerConfigs(Integer port, AuctionServiceBlockingStub stub, Map<String, String> hashTable) {
-        super(port, hashTable);
+    public ServerConfigs(Integer serverPort, AuctionServiceBlockingStub stub, Map<String, HashLimits> hashTable) {
+        super(serverPort, hashTable);
         this.stub = stub;
     }
 

@@ -1,33 +1,25 @@
 package server;
 
+import domain.Log;
 import domain.NextId;
 import domain.SaveAuctionLog;
-import domain.Log;
 import domain.SaveBidLog;
-import io.grpc.ManagedChannel;
 import io.grpc.Server;
-import io.grpc.ServerBuilder;
 import mapper.AuctionData;
 import mapper.AuctionMapper;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
-import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
 import util.JsonLoader;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.List;
 
-import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.TRUE;
 import static java.lang.String.format;
-import static server.AuctionServiceGrpc.newBlockingStub;
-import static util.ConfigProperties.*;
+import static util.ConfigProperties.getNumberOfServers;
+import static util.ConfigProperties.getServerPort;
 
-public class AuctionServer {
+public class ServerController {
     private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
-    private static final String SERVER_HOST = getServerHost();
     private static final Integer SERVER_PORT = getServerPort();
 
     private static final String LOGS_DIR_NAME_PATTERN = "logs-snapshots-%d";
@@ -38,65 +30,11 @@ public class AuctionServer {
 
         BidiMap<Server, ServerConfigs> serversMap = new DualHashBidiMap<>();
 
-        Map<String, String> hashTable = generateHashTable();
-
         for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
-            AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
-            ServerConfigs serverConfigs = new ServerConfigs(SERVER_PORT + i, stub, hashTable);
-            Server server = buildAndStartAuctionServer(SERVER_PORT + i, serverConfigs);
-            serversMap.put(server, serverConfigs);
+            serversMap.putAll(new ServerFactory().bootstrap());
         }
 
         return serversMap;
-    }
-
-    private Map<String, String> generateHashTable() {
-        List<String> list = generateIdList();
-
-        Map<String, String> hashTable = new HashMap<>();
-        list.forEach(obj -> hashTable.put(String.valueOf(hashTable.size()), obj));
-
-        return hashTable;
-    }
-
-    private List<String> generateIdList() {
-        List<String> list = new ArrayList<>();
-        for (int i = 0; i < AuctionServer.NUMBER_OF_SERVERS; i++) {
-            list.add(generateSha1Hash(String.valueOf(i)));
-        }
-        list.sort(Comparator.comparing(String::toLowerCase));
-        return list;
-    }
-
-    private String generateSha1Hash(String dataToDigest) {
-        return DigestUtils.sha1Hex(dataToDigest.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private ManagedChannel buildChannel(String host, Integer port) {
-        return forAddress(host, port)
-                .usePlaintext()
-                .build();
-    }
-
-    private AuctionServiceBlockingStub buildAuctionServerStub(ManagedChannel channel) {
-        return newBlockingStub(channel);
-    }
-
-    private Server buildAndStartAuctionServer(Integer port, ServerConfigs serverConfigs) {
-
-        Server server = ServerBuilder
-                .forPort(port)
-                .addService(new AuctionServiceImpl(serverConfigs)).build();
-
-        try {
-            server.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("Error starting server.");
-            return null;
-        }
-
-        return server;
     }
 
     private void processLogs(BidiMap<Server, ServerConfigs> serversMap) {
@@ -155,13 +93,13 @@ public class AuctionServer {
 
     public static void main(String[] args) {
 
-        AuctionServer auctionServer = new AuctionServer();
+        ServerController serverController = new ServerController();
 
-        BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
+        BidiMap<Server, ServerConfigs> serversMap = serverController.buildServers();
 
         System.out.println(serversMap);
 
-        auctionServer.processLogs(serversMap);
+        serverController.processLogs(serversMap);
 
         serversMap.forEach((server, serverConfig) -> {
             try {

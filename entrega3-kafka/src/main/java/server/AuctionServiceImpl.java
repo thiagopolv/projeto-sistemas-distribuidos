@@ -5,16 +5,16 @@ import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import mapper.AuctionData;
 import mapper.AuctionMapper;
-
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
-
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import server.AuctionServiceGrpc.AuctionServiceImplBase;
 import util.JsonLoader;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -23,7 +23,6 @@ import static domain.LogFunctions.SAVE_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
-import static java.lang.Integer.parseInt;
 import static java.lang.Integer.valueOf;
 import static java.lang.String.format;
 import static java.time.LocalDateTime.now;
@@ -32,8 +31,7 @@ import static org.apache.commons.codec.digest.DigestUtils.sha1Hex;
 import static server.AuctionServiceGrpc.newBlockingStub;
 import static util.ConfigProperties.*;
 
-public class AuctionServiceImpl extends AuctionServiceImplBase {
-
+public class AuctionServiceImpl extends AuctionServiceGrpc.AuctionServiceImplBase {
     private ServerConfigs serverConfigs;
 
     private static Integer SERVER_PORT = getServerPort();
@@ -50,17 +48,17 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
     private static final String SNAPSHOT_FILE_NAME_FORMAT = "snapshot%d.json";
 
-    AuctionServiceImpl() {
+    public AuctionServiceImpl() {
     }
 
-    AuctionServiceImpl(ServerConfigs serverConfigs) {
+    public AuctionServiceImpl(ServerConfigs serverConfigs) {
         this.serverConfigs = serverConfigs;
     }
 
     @Override
     public void getAuctions(GetAuctionsRequest getAuctionsRequest,
                             StreamObserver<GetAuctionsResponse> responseObserver) {
-        Map<String, String> hashTable = generateHashTable();
+        Map<String, HashLimits> hashTable = serverConfigs.getHashTable();
         List<Auction> auctions = new ArrayList<>();
 //        List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
 //        List<Auction> auctions = mapper.auctionListFromAuctionDataList(auctionsData);
@@ -119,11 +117,12 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         AtomicReference<SaveBidResponse> response = new AtomicReference<>();
 
         String id = sendBidRequest.getId();
-        Map<String, String> hashTable = generateHashTable();
+        Map<String, HashLimits> hashTable = serverConfigs.getHashTable();
 
         hashTable.forEach((key, value) -> {
             if (isNull(response.get())) {
-                saveBidIfServerHasId(sendBidRequest, response, id, hashTable.size(), Integer.valueOf(key), value);
+                //FIXME: correct the limits logic
+                saveBidIfServerHasId(sendBidRequest, response, id, hashTable.size(), Integer.valueOf(key), value.getInit());
             }
         });
 
@@ -188,7 +187,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                               StreamObserver<CreateAuctionResponse> responseObserver) {
         AtomicReference<SaveAuctionResponse> response = new AtomicReference<>();
         String id = createAuctionRequest.getAuction().getId();
-        Map<String, String> hashTable = generateHashTable();
+        Map<String, HashLimits> hashTable = serverConfigs.getHashTable();
 
         if (isNull(id)) {
             id = generateSha1Hash(createAuctionRequest.getAuction().toString());
@@ -197,8 +196,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         String finalId = id;
         hashTable.forEach((hashIndex, hash) -> {
             if (isNull(response.get())) {
+                //FIXME: correct the limits logic
                 saveAuctionIfServerHasId(createAuctionRequest, response, finalId, hashTable.size(),
-                        Integer.valueOf(hashIndex), hash);
+                        Integer.valueOf(hashIndex), hash.getInit());
             }
         });
 
@@ -324,7 +324,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @SuppressWarnings("SuspiciousMethodCalls")
     private Integer findServerPortToStoreData(String hash) {
-        Map<String, String> hashTable = serverConfigs.getHashTable();
+        Map<String, HashLimits> hashTable = serverConfigs.getHashTable();
 
         for (int i = 0; i < hashTable.size(); i++) {
             int nextServer = i + 1;
@@ -332,10 +332,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             if (i == hashTable.size() - 1) {
                 nextServer = 0;
             }
+            //FIXME: correct the limits logic
 
-            if (hashTable.get(i).compareTo(hash) <= 0 && hashTable.get(nextServer).compareTo(hash) > 0) {
-                return i + serverConfigs.getPort();
-            }
+//            if (hashTable.get(i).compareTo(hash) <= 0 && hashTable.get(nextServer).compareTo(hash) > 0) {
+//                return i + serverConfigs.getPort();
+//            }
         }
         return serverConfigs.getPort();
     }
@@ -347,24 +348,6 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .setUsername(sendBidRequest.getUsername())
                 .setHashTableId(hashTableId)
                 .build();
-    }
-
-    private Map<String, String> generateHashTable() {
-        List<String> list = generateIdList();
-
-        Map<String, String> hashTable = new HashMap<>();
-        list.forEach(obj -> hashTable.put(String.valueOf(hashTable.size()), obj));
-
-        return hashTable;
-    }
-
-    private List<String> generateIdList() {
-        List<String> list = new ArrayList<>();
-        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
-            list.add(generateSha1Hash(String.valueOf(i)));
-        }
-        list.sort(Comparator.comparing(String::toLowerCase));
-        return list;
     }
 
     private CreateAuctionResponse buildCreateAuctionResponse(Auction finalAuction, Boolean isSuccess) {

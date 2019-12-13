@@ -45,6 +45,15 @@ public class ConfigProperties extends Properties {
         return Integer.parseInt(getProperties().getProperty("number.of.servers"));
     }
 
+    public static Integer getNumberOfNodes() {
+        return Integer.parseInt(getProperties().getProperty("number.of.nodes"));
+    }
+
+    public static Integer getLastBaseHash() {
+        String property = getProperties().getProperty("last.base.hash");
+        return Integer.decode(property);
+    }
+
     public static Integer getSaveCopies() {
         return Integer.parseInt(getProperties().getProperty("save.copies"));
     }
