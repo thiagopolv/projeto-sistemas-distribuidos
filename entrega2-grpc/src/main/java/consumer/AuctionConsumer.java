@@ -1,5 +1,6 @@
 package consumer;
 
+import static java.lang.Boolean.FALSE;
 import static java.util.Collections.singletonList;
 import static server.AuctionServiceGrpc.AuctionServiceBlockingStub;
 import static util.ConfigProperties.getKafkaHost;
@@ -107,7 +108,6 @@ public class AuctionConsumer {
             ObjectMapper om = new ObjectMapper();
             try {
                 do {
-                    System.out.println("Executing consumer!!");
                     ConsumerRecords<String, String> records = mConsumer.poll(Duration.ofMillis(100));
 
                     for (ConsumerRecord<String, String> record : records) {
@@ -135,7 +135,7 @@ public class AuctionConsumer {
             switch (function) {
                 case SAVE_AUCTION:
                     SaveAuctionRequest saveAuctionRequest = objectMapper.readValue(value, SaveAuctionRequest.class);
-                    stub.saveAuction(saveAuctionRequest);
+                    stub.saveAuction(buildSaveAuctionRequestWithSufix(saveAuctionRequest));
 
                 case SAVE_BID:
                     SaveBidRequest saveBidRequest = objectMapper.readValue(value, SaveBidRequest.class);
@@ -144,6 +144,20 @@ public class AuctionConsumer {
                 default:
                     break;
             }
+        }
+
+//        private SaveBidRequest buildSaveBidRequestWithSufix(SaveBidRequest saveBidRequest) {
+//            return SaveBidRequest.newBuilder()
+//                    .
+//                    .build();
+//        }
+
+        private SaveAuctionRequest buildSaveAuctionRequestWithSufix(SaveAuctionRequest request) {
+            return SaveAuctionRequest.newBuilder()
+                    .setAuctionId(request.getAuctionId())
+                    .setAuction(request.getAuction())
+                    .setServerSufix(serverSufix)
+                    .build();
         }
 
     }

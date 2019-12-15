@@ -74,9 +74,8 @@ message SaveBidResponse {
 
 message SaveAuctionRequest {
     Auction auction = 1;
-    int32 hashTableId = 2;
-    bool processingLogs = 3;
-    string auctionId = 4;
+    string auctionId = 2;
+    int32 serverSufix = 3;
 }
 
 message SaveAuctionResponse {
@@ -96,7 +95,6 @@ service AuctionService {
     rpc getLocalAuctions(GetLocalAuctionsRequest) returns (GetLocalAuctionsResponse);
     rpc verifyAuctionOnOtherServers (VerifyAuctionRequest) returns (VerifyAuctionResponse);
     rpc sendBid (SendBidRequest) returns (SendBidResponse);
-    rpc getAuctionsIds(GetAuctionsIdsRequest) returns (GetAuctionsIdsResponse);
     rpc createAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
     rpc saveBid(SaveBidRequest) returns (SaveBidResponse);
     rpc saveAuction(SaveAuctionRequest) returns (SaveAuctionResponse);
