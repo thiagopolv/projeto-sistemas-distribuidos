@@ -2,22 +2,22 @@ package domain;
 
 public class Log {
 
-    private LogFunctions function;
+    private LogFunction function;
     private LogData logData;
 
     public Log() {
     }
 
-    public Log(LogFunctions function, LogData logData) {
+    public Log(LogFunction function, LogData logData) {
         this.function = function;
         this.logData = logData;
     }
 
-    public LogFunctions getFunction() {
+    public LogFunction getFunction() {
         return function;
     }
 
-    public void setFunction(LogFunctions function) {
+    public void setFunction(LogFunction function) {
         this.function = function;
     }
 

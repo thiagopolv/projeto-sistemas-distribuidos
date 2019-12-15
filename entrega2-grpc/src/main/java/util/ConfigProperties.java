@@ -1,9 +1,12 @@
 package util;
 
+import static java.lang.Integer.parseInt;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+@SuppressWarnings("ConstantConditions")
 public class ConfigProperties extends Properties {
 
     private static String ROOT_PATH = Thread.currentThread().getContextClassLoader().getResource("")
@@ -38,27 +41,35 @@ public class ConfigProperties extends Properties {
     }
 
     public static Integer getServerPort() {
-        return Integer.parseInt(getProperties().getProperty("server.port"));
+        return parseInt(getProperties().getProperty("server.port"));
     }
 
     public static Integer getNumberOfServers() {
-        return Integer.parseInt(getProperties().getProperty("number.of.servers"));
+        return parseInt(getProperties().getProperty("number.of.servers"));
     }
 
     public static Integer getSaveCopies() {
-        return Integer.parseInt(getProperties().getProperty("save.copies"));
+        return parseInt(getProperties().getProperty("save.copies"));
     }
 
     public static Integer getDaysToExpireAuction() {
-        return Integer.parseInt(getProperties().getProperty("days.to.finish.auction"));
+        return parseInt(getProperties().getProperty("days.to.finish.auction"));
     }
 
     public static Integer getNumberOfLogs() {
-        return Integer.parseInt(getProperties().getProperty("number.of.logs"));
+        return parseInt(getProperties().getProperty("number.of.logs"));
     }
 
     public static Integer getLogSize() {
-        return Integer.parseInt(getProperties().getProperty("log.size"));
+        return parseInt(getProperties().getProperty("log.size"));
+    }
+
+    public static Integer getNumberOfClusters() {
+        return parseInt(getProperties().getProperty("number.of.clusters"));
+    }
+
+    public static String getKafkaHost() {
+        return getProperties().getProperty("kafka.host");
     }
 
     private static String modifyPathIfOSNotcompatible() {

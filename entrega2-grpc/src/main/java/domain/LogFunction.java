@@ -1,6 +1,6 @@
 package domain;
 
-public enum LogFunctions {
+public enum LogFunction {
 
     SAVE_AUCTION,
     SAVE_BID;

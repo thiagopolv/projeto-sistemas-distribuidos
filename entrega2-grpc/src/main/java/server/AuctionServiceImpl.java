@@ -1,36 +1,49 @@
 package server;
 
-import domain.*;
-import io.grpc.ManagedChannel;
-import io.grpc.stub.StreamObserver;
-import mapper.AuctionData;
-import mapper.AuctionMapper;
-
-import org.apache.commons.collections4.BidiMap;
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
-
-import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import server.AuctionServiceGrpc.AuctionServiceImplBase;
-import util.JsonLoader;
-
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
-import static domain.LogFunctions.SAVE_AUCTION;
-import static domain.LogFunctions.SAVE_BID;
+import static domain.LogFunction.SAVE_AUCTION;
+import static domain.LogFunction.SAVE_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
-import static java.lang.Integer.parseInt;
 import static java.lang.Integer.valueOf;
 import static java.lang.String.format;
 import static java.time.LocalDateTime.now;
 import static java.util.Objects.isNull;
 import static org.apache.commons.codec.digest.DigestUtils.sha1Hex;
 import static server.AuctionServiceGrpc.newBlockingStub;
-import static util.ConfigProperties.*;
+import static util.ConfigProperties.getLogSize;
+import static util.ConfigProperties.getNumberOfLogs;
+import static util.ConfigProperties.getNumberOfServers;
+import static util.ConfigProperties.getSaveCopies;
+import static util.ConfigProperties.getServerHost;
+import static util.ConfigProperties.getServerPort;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+
+import domain.Log;
+import domain.LogData;
+import domain.LogFunction;
+import domain.NextId;
+import domain.SaveAuctionLog;
+import domain.SaveBidLog;
+import io.grpc.ManagedChannel;
+import io.grpc.stub.StreamObserver;
+import mapper.AuctionData;
+import mapper.AuctionMapper;
+import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import server.AuctionServiceGrpc.AuctionServiceImplBase;
+import util.JsonLoader;
 
 public class AuctionServiceImpl extends AuctionServiceImplBase {
 
@@ -50,10 +63,10 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
     private static final String SNAPSHOT_FILE_NAME_FORMAT = "snapshot%d.json";
 
-    AuctionServiceImpl() {
+    public AuctionServiceImpl() {
     }
 
-    AuctionServiceImpl(ServerConfigs serverConfigs) {
+    public AuctionServiceImpl(ServerConfigs serverConfigs) {
         this.serverConfigs = serverConfigs;
     }
 
@@ -282,7 +295,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                 .build();
     }
 
-    private SaveBidResponse saveBidInThisServer(SendBidRequest sendBidRequest, Integer hashTableId) {
+    public SaveBidResponse saveBidInThisServer(SendBidRequest sendBidRequest, Integer hashTableId) {
         ManagedChannel channel = buildChannel(getServerHost(), SERVER_PORT + hashTableId);
         AuctionServiceBlockingStub stub = buildAuctionServerStub(channel);
         SaveBidResponse response = stub.saveBid(buildSaveBidRequest(sendBidRequest, hashTableId));
@@ -291,8 +304,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return response;
     }
 
-    private SaveAuctionResponse saveAuctionInThisServer(CreateAuctionRequest createAuctionRequest, Integer hashTableId, String auctionId) {
-        ManagedChannel channel = buildChannel(getServerHost(), SERVER_PORT + hashTableId);
+    public SaveAuctionResponse saveAuctionInThisServer(CreateAuctionRequest createAuctionRequest, Integer hashTableId, String auctionId) {
+        ManagedChannel channel = buildChannel(SERVER_HOST, SERVER_PORT + hashTableId);
         AuctionServiceBlockingStub stub = buildAuctionServerStub(channel);
         SaveAuctionResponse response = stub.saveAuction(buildSaveAuctionRequest(createAuctionRequest, hashTableId, auctionId));
         channel.shutdown();
@@ -425,7 +438,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, hashTableId), auctionsToSave);
     }
 
-    private void saveLogs(@SuppressWarnings("SameParameterValue") LogFunctions function, LogData request,
+    private void saveLogs(@SuppressWarnings("SameParameterValue") LogFunction function, LogData request,
                           Integer hashTableId, Object data) {
 
         JsonLoader logsAndSnapshotsLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
@@ -536,11 +549,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return savingStubsMap;
     }
 
-    private AuctionServiceBlockingStub buildAuctionServerStub(ManagedChannel channel) {
+    public AuctionServiceBlockingStub buildAuctionServerStub(ManagedChannel channel) {
         return newBlockingStub(channel);
     }
 
-    private ManagedChannel buildChannel(@SuppressWarnings("SameParameterValue") String host, Integer port) {
+    public ManagedChannel buildChannel(@SuppressWarnings("SameParameterValue") String host, Integer port) {
         return forAddress(host, port)
                 .usePlaintext()
                 .build();

@@ -1,5 +1,6 @@
 package server;
 
+import consumer.AuctionConsumer;
 import domain.NextId;
 import domain.SaveAuctionLog;
 import domain.Log;
@@ -9,9 +10,11 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import mapper.AuctionData;
 import mapper.AuctionMapper;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
 import util.JsonLoader;
 
@@ -30,10 +33,14 @@ public class AuctionServer {
     private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
     private static final String SERVER_HOST = getServerHost();
     private static final Integer SERVER_PORT = getServerPort();
+    private static final String KAFKA_HOST = getKafkaHost();
+    private static final Integer NUMBER_OF_CLUSTERS = getNumberOfClusters();
 
     private static final String LOGS_DIR_NAME_PATTERN = "logs-snapshots-%d";
     private static final String NEXT_LOG_FILE = "next-log.json";
     private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
+    private static final String TOPIC_NAME = "auc-topic-%d";
+    private static final String GROUP_ID_NAME = "auc-group-%d";
 
     private BidiMap<Server, ServerConfigs> buildServers() {
 
@@ -123,7 +130,8 @@ public class AuctionServer {
         logs.forEach(log -> {
             switch (log.getFunction()) {
                 case SAVE_AUCTION:
-                    serverConfigs.getStub().saveAuction(buildCreateAuctionRequestFromLog(log.getLogData().getSaveAuctionData()));
+                    serverConfigs.getStub().saveAuction(
+                            buildCreateAuctionRequestFromLog(log.getLogData().getSaveAuctionData()));
                     break;
                 case SAVE_BID:
                     serverConfigs.getStub().saveBid(buildSendBidRequestFromLog(log.getLogData().getSaveBidData()));
@@ -154,22 +162,48 @@ public class AuctionServer {
                 .build();
     }
 
+    private List<AuctionConsumer> buildAuctionConsumers() {
+
+        List<AuctionConsumer> consumers = new ArrayList<>();
+
+        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
+            AuctionConsumer consumer = new AuctionConsumer(
+                    KAFKA_HOST,
+                    format(GROUP_ID_NAME, i),
+                    format(TOPIC_NAME, i % NUMBER_OF_CLUSTERS),
+                    i);
+
+            consumers.add(consumer);
+        }
+
+//        consumers.forEach(consumer -> new Thread(consumer::run));
+        consumers.forEach(AuctionConsumer::run);
+        return consumers;
+    }
+
+
     public static void main(String[] args) {
 
         AuctionServer auctionServer = new AuctionServer();
 
-        BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
+//        BidiMap<Server, ServerConfigs> serversMap = auctionServer.buildServers();
 
-        System.out.println(serversMap);
+        List<AuctionConsumer> consumers = auctionServer.buildAuctionConsumers();
 
-        auctionServer.processLogs(serversMap);
+        System.out.println("Final");
 
-        serversMap.forEach((server, serverConfig) -> {
-            try {
-                server.awaitTermination();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+//        System.out.println(serversMap);
+//
+//        auctionServer.processLogs(serversMap);
+//
+//        serversMap.forEach((server, serverConfig) -> {
+//            try {
+//                server.awaitTermination();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        });
     }
+
+
 }
