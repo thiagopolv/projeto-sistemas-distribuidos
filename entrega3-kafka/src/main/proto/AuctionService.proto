@@ -1,0 +1,102 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "server";
+
+message GetAuctionsRequest {
+}
+
+message Auction {
+    string id = 1;
+    string owner = 2;
+    string product = 3;
+    double initialValue = 4;
+    CurrentBidInfo currentBidInfo = 5;
+    string finishTime = 6;
+    string status = 7;
+}
+
+message CurrentBidInfo {
+    double value = 1;
+    string username = 2;
+}
+
+message GetAuctionsResponse {
+    repeated Auction auctions = 1;
+}
+
+message SendBidRequest {
+    string id = 1;
+    double bid = 2;
+    string username = 3;
+}
+
+message SendBidResponse {
+    bool success = 1;
+    repeated bool successes = 2;
+    repeated Auction auctions = 3;
+}
+
+message GetAuctionsIdsRequest {
+}
+
+message GetAuctionsIdsResponse {
+    repeated string ids = 1;
+}
+
+message CreateAuctionRequest {
+    Auction auction = 1;
+}
+
+message CreateAuctionResponse {
+    bool success = 1;
+    Auction auction = 2;
+}
+
+message VerifyAuctionRequest {
+    string id = 1;
+}
+
+message VerifyAuctionResponse {
+    bool hasAuction = 1;
+}
+
+message SaveBidRequest {
+    string auctionId = 1;
+    double bid = 2;
+    string username = 3;
+    int32 hashTableId = 4;
+    bool processingLogs = 5;
+}
+
+message SaveBidResponse {
+    bool success = 1;
+}
+
+message SaveAuctionRequest {
+    Auction auction = 1;
+    string auctionId = 2;
+    int32 serverSufix = 3;
+}
+
+message SaveAuctionResponse {
+    bool success = 1;
+}
+
+message GetLocalAuctionsRequest {
+    int32 hashTableId = 1;
+}
+
+message GetLocalAuctionsResponse {
+    repeated Auction auctions = 1;
+}
+
+service AuctionService {
+    rpc getAuctions (GetAuctionsRequest) returns (GetAuctionsResponse);
+    rpc getLocalAuctions(GetLocalAuctionsRequest) returns (GetLocalAuctionsResponse);
+    rpc verifyAuctionOnOtherServers (VerifyAuctionRequest) returns (VerifyAuctionResponse);
+    rpc sendBid (SendBidRequest) returns (SendBidResponse);
+    rpc createAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
+    rpc saveBid(SaveBidRequest) returns (SaveBidResponse);
+    rpc saveAuction(SaveAuctionRequest) returns (SaveAuctionResponse);
+}
+
