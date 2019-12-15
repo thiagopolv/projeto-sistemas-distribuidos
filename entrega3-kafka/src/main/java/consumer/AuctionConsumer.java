@@ -137,9 +137,9 @@ public class AuctionConsumer {
                     SaveAuctionRequest saveAuctionRequest = objectMapper.readValue(value, SaveAuctionRequest.class);
                     stub.saveAuction(buildSaveAuctionRequestWithSufix(saveAuctionRequest));
 
-                case SAVE_BID:
-                    SaveBidRequest saveBidRequest = objectMapper.readValue(value, SaveBidRequest.class);
-                    stub.saveBid(saveBidRequest);
+//                case SAVE_BID:
+//                    SaveBidRequest saveBidRequest = objectMapper.readValue(value, SaveBidRequest.class);
+//                    stub.saveBid(saveBidRequest);
 
                 default:
                     break;

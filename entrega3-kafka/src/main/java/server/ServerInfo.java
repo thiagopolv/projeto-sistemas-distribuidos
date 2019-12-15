@@ -7,12 +7,12 @@ public class ServerInfo {
 
     private Integer port;
     private List<Integer> idsInServer;
-    private Map<String, String> hashTable;
+    private Map<String, HashLimits> hashTable;
 
     public ServerInfo() {
     }
 
-    public ServerInfo(Integer port, Map<String, String> hashTable) {
+    public ServerInfo(Integer port, Map<String, HashLimits> hashTable) {
         this.port = port;
         this.hashTable = hashTable;
     }
@@ -50,11 +50,11 @@ public class ServerInfo {
                 '}';
     }
 
-    public Map<String, String> getHashTable() {
+    public Map<String, HashLimits> getHashTable() {
         return hashTable;
     }
 
-    public void setHashTable(Map<String, String> hashTable) {
+    public void setHashTable(Map<String, HashLimits> hashTable) {
         this.hashTable = hashTable;
     }
 }

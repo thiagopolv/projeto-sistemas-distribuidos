@@ -15,7 +15,7 @@ public class ServerConfigs extends ServerInfo {
         this.stub = stub;
     }
 
-    public ServerConfigs(Integer port, AuctionServiceBlockingStub stub, Map<String, String> hashTable) {
+    public ServerConfigs(Integer port, AuctionServiceBlockingStub stub, Map<String, HashLimits> hashTable) {
         super(port, hashTable);
         this.stub = stub;
     }

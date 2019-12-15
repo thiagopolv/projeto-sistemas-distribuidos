@@ -64,12 +64,17 @@ public class ConfigProperties extends Properties {
         return parseInt(getProperties().getProperty("log.size"));
     }
 
-    public static Integer getNumberOfClusters() {
-        return parseInt(getProperties().getProperty("number.of.clusters"));
-    }
-
     public static String getKafkaHost() {
         return getProperties().getProperty("kafka.host");
+    }
+
+    public static Integer getNumberOfNodes() {
+        return Integer.parseInt(getProperties().getProperty("number.of.nodes"));
+    }
+
+    public static Integer getLastBaseHash() {
+        String property = getProperties().getProperty("last.base.hash");
+        return Integer.decode(property);
     }
 
     private static String modifyPathIfOSNotcompatible() {
