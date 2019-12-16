@@ -1,7 +1,6 @@
 package server;
 
 import static domain.LogFunction.SAVE_AUCTION;
-import static domain.LogFunction.SAVE_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -22,8 +21,6 @@ import static util.ConfigProperties.getServerPort;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -183,9 +180,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         List<AuctionData> auctionsData = loadAuctions(saveBidRequest.getHashTableId());
         Optional<AuctionData> auction = getAuctionById(auctionsData, saveBidRequest.getAuctionId());
 
-        if (!saveBidRequest.getProcessingLogs()) {
-            saveLogs(SAVE_BID, buildSaveBidLog(saveBidRequest), saveBidRequest.getHashTableId(), auctionsData);
-        }
+//        if (!saveBidRequest.getProcessingLogs()) {
+//            saveLogs(SAVE_BID, buildSaveBidLog(saveBidRequest), saveBidRequest.getHashTableId(), auctionsData);
+//        }
 
         auction.ifPresent(auctionData -> {
             if (isValidBid(auctionData.getCurrentBidInfo().getValue(), saveBidRequest.getBid())) {
@@ -327,7 +324,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             String auctionId) {
         return SaveAuctionRequest.newBuilder()
                 .setAuction(buildAuctionWithId(createAuctionRequest.getAuction(), auctionId))
-                .setServerSufix(hashTableId)
+                .setAuctionId(auctionId)
                 .build();
     }
 

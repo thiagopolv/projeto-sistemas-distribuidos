@@ -65,7 +65,7 @@ message SaveBidRequest {
     double bid = 2;
     string username = 3;
     int32 hashTableId = 4;
-    bool processingLogs = 5;
+    int32 serverSufix = 5;
 }
 
 message SaveBidResponse {

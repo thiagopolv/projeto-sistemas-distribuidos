@@ -85,7 +85,6 @@ public class ServerController {
                 .setUsername(log.getUsername())
                 .setBid(log.getBid())
                 .setAuctionId(log.getAuctionId())
-                .setProcessingLogs(TRUE)
                 .setHashTableId(log.getHashTableId())
                 .build();
     }
