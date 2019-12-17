@@ -9,6 +9,7 @@ import static util.ConfigProperties.getServerPort;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -49,6 +50,16 @@ public class AuctionConsumer {
         this.serverSufix = serverSufix;
     }
 
+    @Override
+    public String toString() {
+        return "AuctionConsumer{" +
+                "bootstrapServer='" + bootstrapServer + '\'' +
+                ", groupId='" + groupId + '\'' +
+                ", topic='" + topic + '\'' +
+                ", serverSufix=" + serverSufix +
+                '}';
+    }
+
     private Properties consumerProps(String bootstrapServer, String groupId) {
         String deserializer = StringDeserializer.class.getName();
         Properties properties = new Properties();
@@ -56,7 +67,7 @@ public class AuctionConsumer {
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, deserializer);
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, deserializer);
-        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         return properties;
     }
@@ -104,6 +115,7 @@ public class AuctionConsumer {
 
         @Override
         public void run() {
+//            System.out.println("Running ConsumerRunnable");
             AuctionServiceImpl service = new AuctionServiceImpl();
             ObjectMapper om = new ObjectMapper();
             try {
@@ -134,8 +146,7 @@ public class AuctionConsumer {
             GrpcRequestAndResponseMapper grpcRequestAndResponseMapper = new GrpcRequestAndResponseMapper();
             ManagedChannel channel = service.buildChannel(AUCTIONS_HOST, AUCTIONS_BASE_PORT + serverSufix);
             AuctionServiceBlockingStub stub = service.buildAuctionServerStub(channel);
-            System.out.println("Executing - Key: " + function + ", Value: " + value);
-
+            System.out.println(serverSufix + "- Executing - Key: " + function + ", Value: " + value);
             switch (function) {
                 case SAVE_AUCTION:
                     SaveAuctionRequestData saveAuctionRequestData = objectMapper.readValue(value,
@@ -184,9 +195,12 @@ public class AuctionConsumer {
         Integer serverSufix = 0;
         String server = "localhost:9092";
 //        String groupId = "some_application1";
-        String topic = "auctions-topic-2";
+        String topic = "auctions-topic-%s";
 
 //        new Consumer(server, groupId, topic).run();
-        new AuctionConsumer(server, "this-group", topic, 0).run();
+        AuctionConsumer auctionConsumer = new AuctionConsumer(server, UUID.randomUUID().toString(),
+                String.format(topic, args[0]), Integer.valueOf(args[1]));
+        auctionConsumer.run();
+        System.out.println(auctionConsumer);
     }
 }

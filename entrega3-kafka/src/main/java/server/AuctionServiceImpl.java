@@ -300,6 +300,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         try {
             producer.put(String.format(AUCTION_TOPIC_PATTERN, hashTableId), SAVE_AUCTION.name(),
                     om.writeValueAsString(requestData));
+            producer.close();
             response = buildSaveAuctionResponse(TRUE);
         } catch (Exception e) {
             System.out.println("Error publishing Save Auction message.");
@@ -568,7 +569,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         auctionService.createAuction(CreateAuctionRequest.newBuilder()
                 .setAuction(Auction.newBuilder()
-                        .setId("abcd")
+                        .setId("e")
                         .setOwner("me")
                         .setProduct("arroz")
                         .setInitialValue(1.0)
