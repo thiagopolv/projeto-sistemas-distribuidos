@@ -15,7 +15,7 @@ public class ClusterManager {
     private static final Integer NODE_PORT_DIFFERENCE = getNodePortDifference();
     private static final Integer LAST_BASE_HASH = getLastBaseHash();
 
-    private Map<String, String> generateHashTable() {
+    public Map<String, String> generateHashTable() {
         Map<String, String> nodeHashList = new HashMap<>();
         for (int i = 0; i < NUMBER_OF_NODES; i++) {
             String nodeInitialHash = getNodeInitialHash(i);
@@ -28,16 +28,16 @@ public class ClusterManager {
         return Integer.toHexString((LAST_BASE_HASH / NUMBER_OF_NODES * iterator));
     }
 
-    private ClusterConfig getClusterConfig() {
+    public ClusterConfig getClusterConfig() {
         return new ClusterConfig(NUMBER_OF_NODES, BASE_PORT, NODE_PORT_DIFFERENCE, NUMBER_OF_REPLICAS);
     }
 
-    private NodeConfig getNodeBaseConfig(ClusterConfig clusterConfig) {
+    public NodeConfig getNodeBaseConfig(ClusterConfig clusterConfig) {
         return new NodeConfig(clusterConfig.getNumberOfNodes(), clusterConfig.getBasePort(),
                 clusterConfig.getPortDifference(), clusterConfig.getNumberOfReplicas(), clusterConfig.getHashTable());
     }
 
-    private void initNodes(NodeConfig nodeConfig) {
+    public void initNodes(NodeConfig nodeConfig) {
         for (int i = 0; i < NUMBER_OF_NODES; i++) {
             nodeConfig.setCurrentNode(i);
             NodeAdapter adapter = new NodeManager(nodeConfig);

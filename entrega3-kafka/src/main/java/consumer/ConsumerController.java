@@ -34,12 +34,8 @@ public class ConsumerController {
                     format(TOPIC_NAME, i % NUMBER_OF_NODES),
                     i);
             System.out.println(consumer);
-//            consumers.add(consumer);
-//            new Thread(consumer::run).start();
+            consumers.add(consumer);
         }
-
-//        consumers.forEach(consumer -> new Thread(consumer::run));
-//        consumers.forEach(AuctionConsumer::run);
         return consumers;
     }
 
