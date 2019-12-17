@@ -72,6 +72,18 @@ public class ConfigProperties extends Properties {
         return Integer.parseInt(getProperties().getProperty("number.of.nodes"));
     }
 
+    public static Integer getNumberOfReplicas() {
+        return Integer.parseInt(getProperties().getProperty("number.of.replicas"));
+    }
+
+    public static Integer getBasePort() {
+        return Integer.parseInt(getProperties().getProperty("base.port"));
+    }
+
+    public static Integer getNodePortDifference() {
+        return Integer.parseInt(getProperties().getProperty("node.port.difference"));
+    }
+
     public static Integer getLastBaseHash() {
         String property = getProperties().getProperty("last.base.hash");
         return Integer.decode(property);
