@@ -9,6 +9,7 @@ import static util.ConfigProperties.getServerPort;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 
@@ -32,12 +33,13 @@ public class ConsumerController {
                     format(GROUP_ID_NAME, i),
                     format(TOPIC_NAME, i % NUMBER_OF_NODES),
                     i);
-
-            consumers.add(consumer);
+            System.out.println(consumer);
+//            consumers.add(consumer);
+//            new Thread(consumer::run).start();
         }
 
 //        consumers.forEach(consumer -> new Thread(consumer::run));
-        consumers.forEach(AuctionConsumer::run);
+//        consumers.forEach(AuctionConsumer::run);
         return consumers;
     }
 

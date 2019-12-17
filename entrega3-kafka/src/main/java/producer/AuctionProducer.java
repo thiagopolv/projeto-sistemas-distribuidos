@@ -42,7 +42,7 @@ public class AuctionProducer {
         })).get();
     }
 
-    private void close() {
+    public void close() {
         System.out.println("Closing producer's connection");
         producer.close();
     }

@@ -168,9 +168,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         List<AuctionData> auctionsData = loadAuctions(saveBidRequest.getHashTableId());
         Optional<AuctionData> auction = getAuctionById(auctionsData, saveBidRequest.getAuctionId());
 
-        if (!saveBidRequest.getProcessingLogs()) {
-            saveLogs(SAVE_BID, buildSaveBidLog(saveBidRequest), saveBidRequest.getHashTableId(), auctionsData);
-        }
+//        if (!saveBidRequest.getProcessingLogs()) {
+//            saveLogs(SAVE_BID, buildSaveBidLog(saveBidRequest), saveBidRequest.getHashTableId(), auctionsData);
+//        }
 
         auction.ifPresent(auctionData -> {
             if (isValidBid(auctionData.getCurrentBidInfo().getValue(), saveBidRequest.getBid())) {
@@ -288,6 +288,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         try {
             producer.put(String.format(AUCTION_TOPIC_PATTERN, hashTableId), SAVE_AUCTION.name(),
                     om.writeValueAsString(requestData));
+            producer.close();
             response = buildSaveAuctionResponse(TRUE);
         } catch (Exception e) {
             System.out.println("Error publishing Save Auction message.");
@@ -312,7 +313,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                                                        String auctionId) {
         return SaveAuctionRequest.newBuilder()
                 .setAuction(buildAuctionWithId(createAuctionRequest.getAuction(), auctionId))
-                .setServerSufix(hashTableId)
+                .setAuctionId(auctionId)
                 .build();
     }
 
@@ -563,7 +564,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         auctionService.createAuction(CreateAuctionRequest.newBuilder()
                 .setAuction(Auction.newBuilder()
-                        .setId("abcd")
+                        .setId("e")
                         .setOwner("me")
                         .setProduct("arroz")
                         .setInitialValue(1.0)
