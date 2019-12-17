@@ -1,5 +1,6 @@
 package producer;
 
+import domain.LogFunction;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -61,13 +62,11 @@ public class AuctionProducer {
         ObjectMapper om = new ObjectMapper();
 
         String server = "localhost:9092";
-        String topic = "user_registered";
+        String topic = "auction-topic-2";
 
         AuctionProducer auctionProducer = new AuctionProducer(server);
-//        producer.put(topic, "user1", "Jhon");
-//        producer.put(topic, "user2", "Peter");
-//        producer.put(topic, SUM.name(), BigDecimal.valueOf(10L).toString());
-;
+        auctionProducer.put(topic, LogFunction.SAVE_AUCTION.name(), "Jhon");
+        auctionProducer.put(topic, LogFunction.SAVE_AUCTION.name(), "Peter");
         auctionProducer.close();
     }
 }

@@ -511,8 +511,8 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
 
     private String getHashEnd(String currentHash) {
-        if (serverConfig.getHashTable().size() >= Integer.parseInt(currentHash) + 1) {
-            return serverConfig.getHashTable().get("0");
+        if (Integer.parseInt(currentHash) >= serverConfig.getHashTable().size() - 1) {
+            return serverConfig.getHashTable().get("fff");
         }
         return serverConfig.getHashTable().get(String.valueOf(Integer.parseInt(currentHash) + 1));
     }
