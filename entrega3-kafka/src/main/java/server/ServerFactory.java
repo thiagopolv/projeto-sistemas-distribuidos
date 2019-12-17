@@ -1,39 +1,45 @@
 package server;
 
-import com.google.common.collect.ImmutableMap;
+import config.ServerConfig;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.commons.codec.digest.DigestUtils;
 import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import util.ConfigProperties;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static server.AuctionServiceGrpc.newBlockingStub;
-import static util.ConfigProperties.*;
 
 @SuppressWarnings("WeakerAccess")
 public class ServerFactory {
-    private static final int NUMBER_OF_NODES = getNumberOfNodes();
-    private static final int LAST_BASE_HASH = getLastBaseHash();
-    private static final String SERVER_HOST = getServerHost();
-    private static final Integer SERVER_PORT = getServerPort();
+    private static final String SERVER_HOST = ConfigProperties.getServerHost();
+    private ServerConfig serverConfig;
+    private Integer SERVER_PORT;
+
+    public ServerFactory() {
+
+    }
+
+    public ServerFactory(ServerConfig serverBaseConfig, Integer serverPort) {
+        this.serverConfig = serverBaseConfig;
+        this.SERVER_PORT = serverPort;
+    }
 
 
-    public Map<Server, ServerConfigs> bootstrap(Integer iterator) {
-        Map<String, HashLimits> hashTable = generateHashTable();
-
-        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST + iterator, SERVER_PORT));
-        ServerConfigs serverConfigs = new ServerConfigs(SERVER_PORT + iterator, stub, hashTable);
-        Server server = Optional.ofNullable(buildAndStartAuctionServer(serverConfigs, hashTable, iterator))
+    public void bootstrap() {
+//        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
+        Server server = Optional.ofNullable(buildAndStartAuctionServer(serverConfig))
                 .orElseThrow(NullPointerException::new);
-
-        return ImmutableMap.of(server, serverConfigs);
+        try {
+            server.awaitTermination();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -47,40 +53,14 @@ public class ServerFactory {
         return newBlockingStub(channel);
     }
 
-    public Map<String, HashLimits> generateHashTable() {
-        Map<String, HashLimits> hashTable = new HashMap<>();
-
-        for (int i = 0; i < NUMBER_OF_NODES; i++) {
-            hashTable.put(String.valueOf(i), buildNodeHashLimits(i));
-        }
-
-        return hashTable;
-    }
-
-    private HashLimits buildNodeHashLimits(int iterator) {
-        String init = Integer.toHexString((LAST_BASE_HASH / NUMBER_OF_NODES * iterator));
-
-        if (isLastElement(iterator)) {
-            return new HashLimits(init, Integer.toHexString(LAST_BASE_HASH));
-        }
-
-        String end = Integer.toHexString(LAST_BASE_HASH / NUMBER_OF_NODES * (iterator + 1) - 1);
-        return new HashLimits(init, end);
-    }
-
-    private boolean isLastElement(int iterator) {
-        return iterator + 1 == NUMBER_OF_NODES;
-    }
-
     private static String generateSha1Hash(String dataToDigest) {
         return DigestUtils.sha1Hex(dataToDigest.getBytes(StandardCharsets.UTF_8));
     }
 
-    private Server buildAndStartAuctionServer(ServerConfigs serverConfigs, Map<String, HashLimits> hashTable,
-            Integer iterator) {
+    private Server buildAndStartAuctionServer(ServerConfig serverConfig) {
         Server server = ServerBuilder
-                .forPort(SERVER_PORT + iterator)
-                .addService(new AuctionServiceImpl(serverConfigs, hashTable)).build();
+                .forPort(SERVER_PORT)
+                .addService(new AuctionServiceImpl(serverConfig)).build();
 
         try {
             server.start();
@@ -93,9 +73,7 @@ public class ServerFactory {
         return server;
     }
 
-    public static void main(String[] args) {
-
-        ServerFactory serverFactory = new ServerFactory();
-        System.out.println(serverFactory.generateHashTable());
+    public void start() {
+        bootstrap();
     }
 }
