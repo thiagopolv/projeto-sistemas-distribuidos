@@ -105,7 +105,7 @@ public class AuctionConsumer {
     }
 
     private String getCurrentServer() {
-        return Optional.ofNullable(serverConfig).map(s -> s.getCurrentServerPort().toString()).orElse(StringUtils.EMPTY);
+        return Optional.ofNullable(serverConfig).map(s -> s.getCurrentServer().toString()).orElse(StringUtils.EMPTY);
     }
 
     public void await(CountDownLatch latch) {

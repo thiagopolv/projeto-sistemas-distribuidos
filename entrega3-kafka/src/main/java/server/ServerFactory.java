@@ -52,9 +52,9 @@ public class ServerFactory {
 
     private void startParallelConsumer() {
         AuctionConsumer consumer = new AuctionConsumer(KAFKA_HOST,
-                String.format(GROUP_ID_NAME, serverConfig.getCurrentServerPort()),
+                String.format(GROUP_ID_NAME, serverConfig.getCurrentServer()),
                 String.format(TOPIC_NAME, serverConfig.getCurrentNode()),
-                serverConfig.getCurrentServerPort(), serverConfig);
+                serverConfig.getCurrentServer(), serverConfig);
         consumer.run();
     }
 

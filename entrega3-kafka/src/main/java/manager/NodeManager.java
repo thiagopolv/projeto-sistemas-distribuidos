@@ -19,6 +19,7 @@ public class NodeManager implements NodeAdapter {
                     serverBaseConfig.getBasePort() + serverBaseConfig.getPortDifference() *
                             serverBaseConfig.getCurrentNode() + i;
             serverBaseConfig.setCurrentServerPort(currentServerPort);
+            serverBaseConfig.setCurrentServer(i);
             ServerFactory serverFactory = new ServerFactory(serverBaseConfig, getServerPort(i));
 
             Thread thread = new Thread(serverFactory::start);
