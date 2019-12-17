@@ -1,53 +1,62 @@
 package consumer;
 
-import static java.util.Collections.singletonList;
-import static server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import static util.ConfigProperties.getKafkaHost;
-import static util.ConfigProperties.getServerHost;
-import static util.ConfigProperties.getServerPort;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import config.ServerConfig;
+import domain.LogFunction;
+import io.grpc.ManagedChannel;
+import mapper.GrpcRequestAndResponseMapper;
+import mapper.SaveAuctionRequestData;
+import mapper.SaveBidRequestData;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import domain.LogFunction;
-import io.grpc.ManagedChannel;
-import mapper.GrpcRequestAndResponseMapper;
-import mapper.SaveAuctionRequestData;
-import mapper.SaveBidRequestData;
 import server.AuctionServiceImpl;
 import server.SaveAuctionRequest;
 import server.SaveBidRequest;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+
+import static java.util.Collections.singletonList;
+import static server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import static util.ConfigProperties.getServerHost;
+import static util.ConfigProperties.getServerPort;
+
 public class AuctionConsumer {
 
-    private static final String KAFKA_HOST = getKafkaHost();
+    //    private static final String KAFKA_HOST = getKafkaHost();
     private static final Integer AUCTIONS_BASE_PORT = getServerPort();
     private static final String AUCTIONS_HOST = getServerHost();
 
-    private static final String TOPIC_NAME = "auctions-topic-%d";
+//    private static final String TOPIC_NAME = "auctions-topic-%d";
 
     private final String bootstrapServer;
     private final String groupId;
     private final String topic;
     private final Integer serverSufix;
+    private ServerConfig serverConfig;
 
     public AuctionConsumer(String bootstrapServer, String groupId, String topic, Integer serverSufix) {
         this.bootstrapServer = bootstrapServer;
         this.groupId = groupId;
         this.topic = topic;
         this.serverSufix = serverSufix;
+    }
+
+    public AuctionConsumer(String bootstrapServer, String groupId, String topic, Integer serverSufix, ServerConfig serverConfig) {
+        this.bootstrapServer = bootstrapServer;
+        this.groupId = groupId;
+        this.topic = topic;
+        this.serverSufix = serverSufix;
+        this.serverConfig = serverConfig;
     }
 
     @Override
@@ -79,6 +88,7 @@ public class AuctionConsumer {
 
         ConsumerRunnable consumerRunnable = new ConsumerRunnable(bootstrapServer, groupId, topic, latch);
         Thread thread = new Thread(consumerRunnable);
+        thread.setName("consumer-node-" + getCurrentNode() + "--server-" + getCurrentServer());
         thread.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -88,6 +98,14 @@ public class AuctionConsumer {
 
             System.out.println("Application has exited");
         }));
+    }
+
+    private String getCurrentNode() {
+        return Optional.ofNullable(serverConfig).map(s -> s.getCurrentNode().toString()).orElse(StringUtils.EMPTY);
+    }
+
+    private String getCurrentServer() {
+        return Optional.ofNullable(serverConfig).map(s -> s.getCurrentServerPort().toString()).orElse(StringUtils.EMPTY);
     }
 
     public void await(CountDownLatch latch) {
@@ -142,7 +160,7 @@ public class AuctionConsumer {
         }
 
         private void callService(AuctionServiceImpl service, LogFunction function, String value,
-                ObjectMapper objectMapper) throws IOException {
+                                 ObjectMapper objectMapper) throws IOException {
             GrpcRequestAndResponseMapper grpcRequestAndResponseMapper = new GrpcRequestAndResponseMapper();
             ManagedChannel channel = service.buildChannel(AUCTIONS_HOST, AUCTIONS_BASE_PORT + serverSufix);
             AuctionServiceBlockingStub stub = service.buildAuctionServerStub(channel);

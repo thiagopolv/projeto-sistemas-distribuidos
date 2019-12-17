@@ -15,7 +15,10 @@ public class NodeManager implements NodeAdapter {
     public void start() {
         for (int i = 0; i < nodeConfig.getNumberOfReplicas(); i++) {
             ServerConfig serverBaseConfig = getServerBaseConfig();
-            serverBaseConfig.setCurrentServer(i);
+            Integer currentServerPort =
+                    serverBaseConfig.getBasePort() + serverBaseConfig.getPortDifference() *
+                            serverBaseConfig.getCurrentNode() + i;
+            serverBaseConfig.setCurrentServerPort(currentServerPort);
             ServerFactory serverFactory = new ServerFactory(serverBaseConfig, getServerPort(i));
 
             Thread thread = new Thread(serverFactory::start);
@@ -37,6 +40,7 @@ public class NodeManager implements NodeAdapter {
     @Override
     public ServerConfig getServerBaseConfig() {
         return new ServerConfig(nodeConfig.getNumberOfNodes(), nodeConfig.getBasePort(),
-                nodeConfig.getPortDifference(), nodeConfig.getNumberOfReplicas(), nodeConfig.getHashTable(), nodeConfig.getCurrentNode());
+                nodeConfig.getPortDifference(), nodeConfig.getNumberOfReplicas(), nodeConfig.getHashTable(),
+                nodeConfig.getCurrentNode());
     }
 }

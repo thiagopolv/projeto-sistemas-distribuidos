@@ -1,38 +1,6 @@
 package server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import config.ClusterConfig;
-import config.NodeConfig;
-import config.ServerConfig;
-import domain.*;
-import io.grpc.ManagedChannel;
-import io.grpc.stub.StreamObserver;
-import manager.ClusterManager;
-import manager.NodeManager;
-import mapper.AuctionData;
-import mapper.AuctionMapper;
-import mapper.GrpcRequestAndResponseMapper;
-import mapper.SaveAuctionRequestData;
-
-import org.apache.commons.collections4.BidiMap;
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
-
-import producer.AuctionProducer;
-import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import server.AuctionServiceGrpc.AuctionServiceImplBase;
-import util.JsonLoader;
-
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static domain.LogFunction.SAVE_AUCTION;
-import static domain.LogFunction.SAVE_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -42,7 +10,40 @@ import static java.time.LocalDateTime.now;
 import static java.util.Objects.isNull;
 import static org.apache.commons.codec.digest.DigestUtils.sha1Hex;
 import static server.AuctionServiceGrpc.newBlockingStub;
-import static util.ConfigProperties.*;
+import static util.ConfigProperties.getKafkaHost;
+import static util.ConfigProperties.getLogSize;
+import static util.ConfigProperties.getNumberOfLogs;
+import static util.ConfigProperties.getNumberOfNodes;
+import static util.ConfigProperties.getNumberOfServers;
+import static util.ConfigProperties.getSaveCopies;
+import static util.ConfigProperties.getServerHost;
+import static util.ConfigProperties.getServerPort;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import config.ServerConfig;
+import domain.LogData;
+import domain.NextId;
+import domain.SaveBidLog;
+import io.grpc.ManagedChannel;
+import io.grpc.Server;
+import io.grpc.stub.StreamObserver;
+import mapper.AuctionData;
+import mapper.AuctionMapper;
+import mapper.GrpcRequestAndResponseMapper;
+import mapper.SaveAuctionRequestData;
+import producer.AuctionProducer;
+import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import server.AuctionServiceGrpc.AuctionServiceImplBase;
+import util.JsonLoader;
 
 public class AuctionServiceImpl extends AuctionServiceImplBase {
 
@@ -57,13 +58,14 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     private static final String KAFKA_SERVER_HOST = getKafkaHost();
     private static final Integer NUMBER_OF_NODES = getNumberOfNodes();
 
-    private static final String AUCTIONS_FILE_NAME_PATTERN = "auctions%d.json";
+    private static final String AUCTIONS_FILE_NAME_PATTERN = "server-%d.json";
     private static final String LOGS_DIR_NAME_PATTERN = "logs-snapshots-%d";
     private static final String LOGS_FILE_NAME_PATTERN = "logs%d.json";
     private static final String NEXT_LOG_FILE = "next-log.json";
     private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
     private static final String SNAPSHOT_FILE_NAME_PATTERN = "snapshot%d.json";
     private static final String AUCTION_TOPIC_PATTERN = "auctions-topic-%d";
+    private static final String NODE_DIRECTORY_PATTERN = "node%d";
 
     public AuctionServiceImpl(ServerConfig serverConfig) {
         super();
@@ -118,7 +120,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         AuctionMapper mapper = new AuctionMapper();
 
-        List<AuctionData> auctionsData = loadAuctions(getLocalAuctionsRequest.getHashTableId());
+        List<AuctionData> auctionsData = loadAuctions(serverConfig);
         List<Auction> auctions = mapper.auctionListFromAuctionDataList(auctionsData);
 
         GetLocalAuctionsResponse response = GetLocalAuctionsResponse.newBuilder()
@@ -172,7 +174,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     public void saveBid(SaveBidRequest saveBidRequest, StreamObserver<SaveBidResponse> responseObserver) {
 
         AtomicReference<Boolean> success = new AtomicReference<>(FALSE);
-        List<AuctionData> auctionsData = loadAuctions(saveBidRequest.getHashTableId());
+        List<AuctionData> auctionsData = loadAuctions(serverConfig);
         Optional<AuctionData> auction = getAuctionById(auctionsData, saveBidRequest.getAuctionId());
 
 //        if (!saveBidRequest.getProcessingLogs()) {
@@ -183,7 +185,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             if (isValidBid(auctionData.getCurrentBidInfo().getValue(), saveBidRequest.getBid())) {
                 auctionData.getCurrentBidInfo().setValue(saveBidRequest.getBid());
                 auctionData.getCurrentBidInfo().setUsername(saveBidRequest.getUsername());
-                saveAuctions(auctionsData, saveBidRequest.getHashTableId());
+                saveAuctions(auctionsData, serverConfig);
                 success.set(TRUE);
             } else {
                 success.set(FALSE);
@@ -233,9 +235,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //        }
 
         try {
-            List<AuctionData> auctionList = loadAuctions(request.getServerSufix());
+            List<AuctionData> auctionList = loadAuctions(serverConfig);
             auctionList.add(auctionMapper.auctionDataFromAuction(request.getAuction()));
-            saveAuctions(auctionList, request.getServerSufix());
+            saveAuctions(auctionList, serverConfig);
             response = buildSaveAuctionResponse(TRUE);
         } catch (Exception e) {
             response = buildSaveAuctionResponse(FALSE);
@@ -294,7 +296,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
 
         try {
-            producer.put(String.format(AUCTION_TOPIC_PATTERN, hashTableId), SAVE_AUCTION.name(),
+            producer.put(format(AUCTION_TOPIC_PATTERN, hashTableId), SAVE_AUCTION.name(),
                     om.writeValueAsString(requestData));
             producer.close();
             response = buildSaveAuctionResponse(TRUE);
@@ -366,114 +368,117 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //        return new LogData(createLog);
 //    }
 
-    private LogData buildSaveBidLog(SaveBidRequest sendBidRequest) {
-        SaveBidLog saveBidLog = new SaveBidLog();
+//    private LogData buildSaveBidLog(SaveBidRequest sendBidRequest) {
+//        SaveBidLog saveBidLog = new SaveBidLog();
+//
+//        saveBidLog.setBid(sendBidRequest.getBid());
+//        saveBidLog.setAuctionId(sendBidRequest.getAuctionId());
+//        saveBidLog.setUsername(sendBidRequest.getUsername());
+//        saveBidLog.setHashTableId(sendBidRequest.getHashTableId());
+//
+//        return new LogData(saveBidLog);
+//    }
 
-        saveBidLog.setBid(sendBidRequest.getBid());
-        saveBidLog.setAuctionId(sendBidRequest.getAuctionId());
-        saveBidLog.setUsername(sendBidRequest.getUsername());
-        saveBidLog.setHashTableId(sendBidRequest.getHashTableId());
+//    List<AuctionData> loadSnapshot(JsonLoader jsonLoader, Integer sufix) {
+//        return new ArrayList<>(jsonLoader.loadList(format(SNAPSHOT_FILE_NAME_PATTERN, sufix), AuctionData.class));
+//    }
 
-        return new LogData(saveBidLog);
+    private List<AuctionData> loadAuctions(ServerConfig serverConfig) {
+        JsonLoader jsonLoader = new JsonLoader("src/main/data/" + format(NODE_DIRECTORY_PATTERN,
+                serverConfig.getCurrentNode()));
+        return new ArrayList<>(
+                jsonLoader.loadList(format(AUCTIONS_FILE_NAME_PATTERN, serverConfig.getCurrentServerPort()),
+                        AuctionData.class));
     }
 
-    List<AuctionData> loadSnapshot(JsonLoader jsonLoader, Integer sufix) {
-        return new ArrayList<>(jsonLoader.loadList(format(SNAPSHOT_FILE_NAME_PATTERN, sufix), AuctionData.class));
+//    private Integer loadAuctionNextId(String resource) {
+//        JsonLoader jsonLoader = new JsonLoader("src/main/data");
+//        NextId nextId = jsonLoader.loadObject(resource, NextId.class);
+//        nextId.setId(nextId.getId() + 1);
+//        jsonLoader.saveFile(resource, nextId);
+//
+//        return nextId.getId() - 1;
+//    }
+
+//    NextId loadLogOrSnapshotNextId(String resource, JsonLoader jsonLoader) {
+//        NextId nextId = jsonLoader.loadObject(resource, NextId.class);
+//        return nextId;
+//    }
+
+    public void saveAuctions(List<AuctionData> auctionsToSave, ServerConfig serverConfig) {
+        JsonLoader jsonLoader = new JsonLoader("src/main/data/" + format(LOGS_FILE_NAME_PATTERN,
+                serverConfig.getCurrentNode()));
+
+        jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, serverConfig.getCurrentServerPort()), auctionsToSave);
     }
 
-    private List<AuctionData> loadAuctions(Integer serverSufix) {
-        JsonLoader jsonLoader = new JsonLoader("src/main/data");
-        return new ArrayList<>(jsonLoader.loadList(String.format(AUCTIONS_FILE_NAME_PATTERN, serverSufix),
-                AuctionData.class));
-    }
+//    private void saveLogs(@SuppressWarnings("SameParameterValue") LogFunction function, LogData request,
+//            Integer hashTableId, Object data) {
+//
+//        JsonLoader logsAndSnapshotsLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
+//                hashTableId));
+//
+//        NextId nextLog = loadLogOrSnapshotNextId(NEXT_LOG_FILE, logsAndSnapshotsLoader);
+//        NextId nextSnapshot = loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logsAndSnapshotsLoader);
+//        List<Log> logs = loadLogs(nextLog.getId(), logsAndSnapshotsLoader);
+//        alternateNextIdsAndCreateSnapshotIfLogIsFull(logs, nextLog, nextSnapshot, logsAndSnapshotsLoader, data,
+//                hashTableId);
+//
+//        logs.add(new Log(function, request));
+//        logsAndSnapshotsLoader.saveFile(format(LOGS_FILE_NAME_PATTERN, nextLog.getId()), logs);
+//
+//    }
 
-    private Integer loadAuctionNextId(String resource) {
-        JsonLoader jsonLoader = new JsonLoader("src/main/data");
-        NextId nextId = jsonLoader.loadObject(resource, NextId.class);
-        nextId.setId(nextId.getId() + 1);
-        jsonLoader.saveFile(resource, nextId);
+//    private Object loadDataFromDBIfNecessary(Object data, Integer port) {
+//        if (isNull(data)) {
+//            data = loadAuctions(port);
+//        }
+//        return data;
+//    }
 
-        return nextId.getId() - 1;
-    }
+//    private void createSnapshot(JsonLoader jsonLoader, Object data) {
+//        NextId nextSnapshotId = loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, jsonLoader);
+//        jsonLoader.saveFile(format(SNAPSHOT_FILE_NAME_PATTERN, nextSnapshotId.getId()), data);
+//        jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextSnapshotId);
+//    }
+//
+//    private void alternateLogFile(JsonLoader jsonLoader, NextId nextLogId) {
+//        setLogsOrSnapshotsNextId(nextLogId);
+//        jsonLoader.saveFile(NEXT_LOG_FILE, nextLogId);
+//    }
+//
+//    private void alternateSnapshotFile(JsonLoader jsonLoader, NextId nextLogId) {
+//        setLogsOrSnapshotsNextId(nextLogId);
+//        jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextLogId);
+//    }
+//
+//    private void setLogsOrSnapshotsNextId(NextId nextId) {
+//        if (nextId.getId().equals(NUMBER_OF_LOGS - 1)) {
+//            nextId.setId(0);
+//        } else {
+//            nextId.setId(nextId.getId() + 1);
+//        }
+//    }
 
-    NextId loadLogOrSnapshotNextId(String resource, JsonLoader jsonLoader) {
-        NextId nextId = jsonLoader.loadObject(resource, NextId.class);
-        return nextId;
-    }
+//    private void alternateNextIdsAndCreateSnapshotIfLogIsFull(List<Log> logs, NextId nextLog, NextId nextSnapshot,
+//            JsonLoader logsAndSnapshotsLoader, Object data, Integer port) {
+//        if (logFileIsFull(logs)) {
+//            alternateLogFile(logsAndSnapshotsLoader, nextLog);
+//            alternateSnapshotFile(logsAndSnapshotsLoader, nextSnapshot);
+//            data = loadDataFromDBIfNecessary(data, port);
+//            createSnapshot(logsAndSnapshotsLoader, data);
+//            logs.clear();
+//        }
+//    }
 
-    public void saveAuctions(List<AuctionData> auctionsToSave, Integer hashTableId) {
-        JsonLoader jsonLoader = new JsonLoader("src/main/data");
+//    private boolean logFileIsFull(List<Log> logs) {
+//        return logs.size() == LOG_SIZE;
+//    }
 
-        jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, hashTableId), auctionsToSave);
-    }
-
-    private void saveLogs(@SuppressWarnings("SameParameterValue") LogFunction function, LogData request,
-            Integer hashTableId, Object data) {
-
-        JsonLoader logsAndSnapshotsLoader = new JsonLoader("src/main/data/" + format(LOGS_DIR_NAME_PATTERN,
-                hashTableId));
-
-        NextId nextLog = loadLogOrSnapshotNextId(NEXT_LOG_FILE, logsAndSnapshotsLoader);
-        NextId nextSnapshot = loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, logsAndSnapshotsLoader);
-        List<Log> logs = loadLogs(nextLog.getId(), logsAndSnapshotsLoader);
-        alternateNextIdsAndCreateSnapshotIfLogIsFull(logs, nextLog, nextSnapshot, logsAndSnapshotsLoader, data,
-                hashTableId);
-
-        logs.add(new Log(function, request));
-        logsAndSnapshotsLoader.saveFile(format(LOGS_FILE_NAME_PATTERN, nextLog.getId()), logs);
-
-    }
-
-    private Object loadDataFromDBIfNecessary(Object data, Integer port) {
-        if (isNull(data)) {
-            data = loadAuctions(port);
-        }
-        return data;
-    }
-
-    private void createSnapshot(JsonLoader jsonLoader, Object data) {
-        NextId nextSnapshotId = loadLogOrSnapshotNextId(NEXT_SNAPSHOT_FILE, jsonLoader);
-        jsonLoader.saveFile(format(SNAPSHOT_FILE_NAME_PATTERN, nextSnapshotId.getId()), data);
-        jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextSnapshotId);
-    }
-
-    private void alternateLogFile(JsonLoader jsonLoader, NextId nextLogId) {
-        setLogsOrSnapshotsNextId(nextLogId);
-        jsonLoader.saveFile(NEXT_LOG_FILE, nextLogId);
-    }
-
-    private void alternateSnapshotFile(JsonLoader jsonLoader, NextId nextLogId) {
-        setLogsOrSnapshotsNextId(nextLogId);
-        jsonLoader.saveFile(NEXT_SNAPSHOT_FILE, nextLogId);
-    }
-
-    private void setLogsOrSnapshotsNextId(NextId nextId) {
-        if (nextId.getId().equals(NUMBER_OF_LOGS - 1)) {
-            nextId.setId(0);
-        } else {
-            nextId.setId(nextId.getId() + 1);
-        }
-    }
-
-    private void alternateNextIdsAndCreateSnapshotIfLogIsFull(List<Log> logs, NextId nextLog, NextId nextSnapshot,
-            JsonLoader logsAndSnapshotsLoader, Object data, Integer port) {
-        if (logFileIsFull(logs)) {
-            alternateLogFile(logsAndSnapshotsLoader, nextLog);
-            alternateSnapshotFile(logsAndSnapshotsLoader, nextSnapshot);
-            data = loadDataFromDBIfNecessary(data, port);
-            createSnapshot(logsAndSnapshotsLoader, data);
-            logs.clear();
-        }
-    }
-
-    private boolean logFileIsFull(List<Log> logs) {
-        return logs.size() == LOG_SIZE;
-    }
-
-    List<Log> loadLogs(Integer id, JsonLoader jsonLoader) {
-        return new ArrayList<>(jsonLoader.loadList(format(LOGS_FILE_NAME_PATTERN, id),
-                Log.class));
-    }
+//    List<Log> loadLogs(Integer id, JsonLoader jsonLoader) {
+//        return new ArrayList<>(jsonLoader.loadList(format(LOGS_FILE_NAME_PATTERN, id),
+//                Log.class));
+//    }
 
     private Optional<AuctionData> getAuctionById(List<AuctionData> list, String id) {
 
@@ -486,43 +491,43 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         return newBid > currentBid;
     }
 
-    private BidiMap<Integer, AuctionServiceBlockingStub> buildStubsMap(Integer actualServerPort) {
+//    private BidiMap<Integer, AuctionServiceBlockingStub> buildStubsMap(Integer actualServerPort) {
+//
+//        BidiMap<Integer, AuctionServiceBlockingStub> stubsMap = new DualHashBidiMap<>();
+//
+//        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
+//            if (SERVER_PORT + i != actualServerPort) {
+//                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
+//                stubsMap.put(SERVER_PORT + i, stub);
+//            }
+//        }
+//
+//        return stubsMap;
+//    }
 
-        BidiMap<Integer, AuctionServiceBlockingStub> stubsMap = new DualHashBidiMap<>();
+//    private BidiMap<Integer, AuctionServiceBlockingStub> buildSavingStubsMap(Integer port) {
+//
+//        BidiMap<Integer, AuctionServiceBlockingStub> savingStubsMap = new DualHashBidiMap<>();
+//
+//        for (int i = 1; i < SAVE_COPIES; i++) {
+//            if (port + i >= SERVER_PORT + NUMBER_OF_SERVERS) {
+//                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
+//                savingStubsMap.put(SERVER_PORT, stub);
+//            } else {
+//                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, port + 1));
+//                savingStubsMap.put(port + 1, stub);
+//            }
+//        }
+//
+//        return savingStubsMap;
+//    }
 
-        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
-            if (SERVER_PORT + i != actualServerPort) {
-                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT + i));
-                stubsMap.put(SERVER_PORT + i, stub);
-            }
+
+    private String getHashEnd(String currentHash) {
+        if (Integer.parseInt(currentHash) >= serverConfig.getHashTable().size() - 1) {
+            return serverConfig.getHashTable().get("fff");
         }
-
-        return stubsMap;
-    }
-
-    private BidiMap<Integer, AuctionServiceBlockingStub> buildSavingStubsMap(Integer port) {
-
-        BidiMap<Integer, AuctionServiceBlockingStub> savingStubsMap = new DualHashBidiMap<>();
-
-        for (int i = 1; i < SAVE_COPIES; i++) {
-            if (port + i >= SERVER_PORT + NUMBER_OF_SERVERS) {
-                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
-                savingStubsMap.put(SERVER_PORT, stub);
-            } else {
-                AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, port + 1));
-                savingStubsMap.put(port + 1, stub);
-            }
-        }
-
-        return savingStubsMap;
-    }
-
-
-    private String getHashEnd(String currentHashIndex) {
-        if (Integer.parseInt(currentHashIndex) >= serverConfig.getHashTable().size() - 1) {
-            return "ffff";
-        }
-        return serverConfig.getHashTable().get(String.valueOf(Integer.parseInt(currentHashIndex) + 1));
+        return serverConfig.getHashTable().get(String.valueOf(Integer.parseInt(currentHash) + 1));
     }
 
     public AuctionServiceBlockingStub buildAuctionServerStub(ManagedChannel channel) {
