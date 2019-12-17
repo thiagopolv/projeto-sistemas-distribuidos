@@ -1,0 +1,13 @@
+{
+  "numberOfNodes": 3,
+  "basePort": 20000,
+  "portDifference": 500,
+  "numberOfReplicas": 3,
+  "currentNode": 0,
+  "currentServer": 0,
+  "nodes": {
+    "0": "000",
+    "1": "555",
+    "2": "aaa"
+  }
+}
