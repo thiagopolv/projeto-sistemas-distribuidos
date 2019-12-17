@@ -1,6 +1,7 @@
 package server;
 
 import config.ServerConfig;
+import consumer.AuctionConsumer;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -14,12 +15,16 @@ import java.util.Optional;
 
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static server.AuctionServiceGrpc.newBlockingStub;
+import static util.ConfigProperties.getKafkaHost;
 
 @SuppressWarnings("WeakerAccess")
 public class ServerFactory {
     private static final String SERVER_HOST = ConfigProperties.getServerHost();
     private ServerConfig serverConfig;
     private Integer SERVER_PORT;
+    private static final String TOPIC_NAME = "auction-topic-%d";
+    private static final String GROUP_ID_NAME = "auction-group-%d";
+    private static final String KAFKA_HOST = getKafkaHost();
 
     public ServerFactory() {
 
@@ -32,15 +37,35 @@ public class ServerFactory {
 
 
     public void bootstrap() {
-//        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
+        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
         Server server = Optional.ofNullable(buildAndStartAuctionServer(serverConfig))
                 .orElseThrow(NullPointerException::new);
+
+        startParallelConsumer();
+        //start Parallel logs/snapshots
         try {
             server.awaitTermination();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
+
+    private void startParallelConsumer() {
+        AuctionConsumer consumer = new AuctionConsumer(KAFKA_HOST,
+                String.format(GROUP_ID_NAME, serverConfig.getCurrentServer()),
+                String.format(TOPIC_NAME, serverConfig.getCurrentNode()),
+                serverConfig.getCurrentServer(), serverConfig);
+        consumer.run();
+    }
+
+    private Integer getServerPort(int serverPosition) {
+        return serverConfig.getBasePort() + getNodeOffset() + serverPosition;
+    }
+
+    private Integer getNodeOffset() {
+        return serverConfig.getCurrentNode() * serverConfig.getPortDifference();
+    }
+
 
     @SuppressWarnings("SameParameterValue")
     private ManagedChannel buildChannel(String host, Integer port) {
