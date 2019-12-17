@@ -284,19 +284,19 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     public SaveAuctionResponse publishSaveAuctionMessage(CreateAuctionRequest createAuctionRequest,
-            Integer hashTableId, String auctionId) {
+            Integer hashIndex, String auctionId) {
         ObjectMapper om = new ObjectMapper();
         GrpcRequestAndResponseMapper grpcRequestAndResponseMapper = new GrpcRequestAndResponseMapper();
         SaveAuctionResponse response;
         AuctionProducer producer = new AuctionProducer(KAFKA_SERVER_HOST);
 
-        SaveAuctionRequest request = buildSaveAuctionRequest(createAuctionRequest, hashTableId, auctionId);
+        SaveAuctionRequest request = buildSaveAuctionRequest(createAuctionRequest, hashIndex, auctionId);
         SaveAuctionRequestData requestData =
                 grpcRequestAndResponseMapper.saveAuctionRequestDataFromSaveAuctionRequest(request);
 
 
         try {
-            producer.put(format(AUCTION_TOPIC_PATTERN, hashTableId), SAVE_AUCTION.name(),
+            producer.put(format(AUCTION_TOPIC_PATTERN, hashIndex), SAVE_AUCTION.name(),
                     om.writeValueAsString(requestData));
             producer.close();
             response = buildSaveAuctionResponse(TRUE);
@@ -525,7 +525,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     private String getHashEnd(String currentHash) {
         if (Integer.parseInt(currentHash) >= serverConfig.getHashTable().size() - 1) {
-            return serverConfig.getHashTable().get("fff");
+            return "ffff";
         }
         return serverConfig.getHashTable().get(String.valueOf(Integer.parseInt(currentHash) + 1));
     }
