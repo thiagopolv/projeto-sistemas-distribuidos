@@ -15,9 +15,7 @@ public class NodeManager implements NodeAdapter {
     public void start() {
         for (int i = 0; i < nodeConfig.getNumberOfReplicas(); i++) {
             ServerConfig serverBaseConfig = getServerBaseConfig();
-            Integer currentServerPort =
-                    serverBaseConfig.getBasePort() + serverBaseConfig.getPortDifference() *
-                            serverBaseConfig.getCurrentNode() + i;
+            Integer currentServerPort = getServerPort(i);
             serverBaseConfig.setCurrentServerPort(currentServerPort);
             serverBaseConfig.setCurrentServer(i);
             ServerFactory serverFactory = new ServerFactory(serverBaseConfig, getServerPort(i));
