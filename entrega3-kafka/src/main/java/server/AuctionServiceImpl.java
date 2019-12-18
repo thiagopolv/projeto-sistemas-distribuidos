@@ -1,72 +1,45 @@
 package server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import config.ServerConfig;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
+import mapper.*;
+import org.apache.commons.lang3.StringUtils;
+import producer.AuctionProducer;
+import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import server.AuctionServiceGrpc.AuctionServiceImplBase;
+import util.JsonLoader;
+
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static domain.LogFunction.SAVE_AUCTION;
 import static domain.LogFunction.SAVE_BID;
 import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static java.lang.Integer.parseInt;
-import static java.lang.Integer.valueOf;
 import static java.lang.String.format;
-import static java.time.LocalDateTime.now;
 import static java.util.Objects.isNull;
 import static org.apache.commons.codec.digest.DigestUtils.sha1Hex;
 import static server.AuctionServiceGrpc.newBlockingStub;
-import static util.ConfigProperties.getKafkaHost;
-import static util.ConfigProperties.getLogSize;
-import static util.ConfigProperties.getNumberOfLogs;
-import static util.ConfigProperties.getNumberOfNodes;
-import static util.ConfigProperties.getNumberOfServers;
-import static util.ConfigProperties.getSaveCopies;
-import static util.ConfigProperties.getServerHost;
-import static util.ConfigProperties.getServerPort;
-
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import config.ServerConfig;
-import domain.LogData;
-import domain.NextId;
-import domain.SaveBidLog;
-import io.grpc.ManagedChannel;
-import io.grpc.Server;
-import io.grpc.stub.StreamObserver;
-import mapper.AuctionData;
-import mapper.AuctionMapper;
-import mapper.GrpcRequestAndResponseMapper;
-import mapper.SaveAuctionRequestData;
-import mapper.SaveBidRequestData;
-import producer.AuctionProducer;
-import server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import server.AuctionServiceGrpc.AuctionServiceImplBase;
-import util.JsonLoader;
+import static util.ConfigProperties.*;
 
 public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     private ServerConfig serverConfig;
 
-    private static Integer SERVER_PORT = getServerPort();
-    private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
-    private static final String SERVER_HOST = getServerHost();
-    private static final Integer SAVE_COPIES = getSaveCopies();
-    private static final Integer NUMBER_OF_LOGS = getNumberOfLogs();
-    private static final Integer LOG_SIZE = getLogSize();
-    private static final String KAFKA_SERVER_HOST = getKafkaHost();
     private static final Integer NUMBER_OF_NODES = getNumberOfNodes();
+    private static final Integer NUMBER_OF_REPLICAS = getNumberOfReplicas();
+    private static final Integer NODE_PORT_DIFFERENCE = getNodePortDifference();
+    private static final Integer BASE_PORT = getBasePort();
+    private static final String SERVER_HOST = getServerHost();
+    private static final String KAFKA_SERVER_HOST = getKafkaHost();
 
     private static final String AUCTIONS_FILE_NAME_PATTERN = "server-%d.json";
-    private static final String LOGS_DIR_NAME_PATTERN = "logs-snapshots-%d";
-    private static final String LOGS_FILE_NAME_PATTERN = "logs%d.json";
-    private static final String NEXT_LOG_FILE = "next-log.json";
-    private static final String NEXT_SNAPSHOT_FILE = "next-snapshot.json";
-    private static final String SNAPSHOT_FILE_NAME_PATTERN = "snapshot%d.json";
     private static final String AUCTION_TOPIC_PATTERN = "auction-topic-%d";
     private static final String NODE_DIRECTORY_PATTERN = "node%d";
 
@@ -80,7 +53,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getAuctions(GetAuctionsRequest getAuctionsRequest,
-            StreamObserver<GetAuctionsResponse> responseObserver) {
+                            StreamObserver<GetAuctionsResponse> responseObserver) {
         List<Auction> auctions = new ArrayList<>();
 //        List<AuctionData> auctionsData = loadAuctions(serverConfigs.getPort());
 //        List<Auction> auctions = mapper.auctionListFromAuctionDataList(auctionsData);
@@ -105,12 +78,42 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private GetLocalAuctionsResponse getServerAuctions(String key) {
-        ManagedChannel channel = buildChannel(SERVER_HOST, serverConfig.getCurrentServerPort());
-        AuctionServiceBlockingStub stub = buildAuctionServerStub(channel);
-        GetLocalAuctionsResponse response = stub.getLocalAuctions(buildGetLocalAuctionsRequest(key));
-        channel.shutdown();
+        RetryableAbstraction retryableAbstraction = new RetryableAbstraction(key);
+        retryableAbstraction.retryable();
+
+        AuctionServiceBlockingStub stub = retryableAbstraction.getStub();
+
+        GetLocalAuctionsResponse response = null;
+
+        try {
+            response = stub.getLocalAuctions(buildGetLocalAuctionsRequest(key));
+        } catch (StatusRuntimeException e) {
+            this.getServerAuctions(key);
+        }
+        retryableAbstraction.getChannel().shutdown();
 
         return response;
+
+    }
+
+    private List<Integer> getServerPortsFromNode(int currentNode) {
+        List<Integer> portList = new ArrayList<>();
+        for (int currentServer = 0; currentServer < NUMBER_OF_REPLICAS; currentServer++) {
+            portList.add(getServerPort(currentServer, currentNode));
+        }
+        return portList;
+    }
+
+    private Integer getRandomPort(List<Integer> portList) {
+        return portList.get(new Random().nextInt(portList.size()));
+    }
+
+    private Integer getServerPort(int serverPosition, int currentNode) {
+        return BASE_PORT + getNodeOffset(currentNode) + serverPosition;
+    }
+
+    private Integer getNodeOffset(int currentNode) {
+        return currentNode * NODE_PORT_DIFFERENCE;
     }
 
     private GetLocalAuctionsRequest buildGetLocalAuctionsRequest(String key) {
@@ -119,7 +122,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void getLocalAuctions(GetLocalAuctionsRequest getLocalAuctionsRequest,
-            StreamObserver<GetLocalAuctionsResponse> responseObserver) {
+                                 StreamObserver<GetLocalAuctionsResponse> responseObserver) {
 
         AuctionMapper mapper = new AuctionMapper();
 
@@ -139,9 +142,15 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         AtomicReference<SaveBidResponse> response = new AtomicReference<>();
 
         String id = sendBidRequest.getId();
+        if (StringUtils.isBlank(id)) {
+            id = generateSha1Hash(sendBidRequest.toString());
+        }
+
+        String finalId = id;
+
         serverConfig.getHashTable().forEach((key, value) -> {
             if (isNull(response.get())) {
-                saveBidIfServerHasId(sendBidRequest, response, id, Integer.valueOf(key), value, getHashEnd(key));
+                saveBidIfServerHasId(sendBidRequest, response, finalId, Integer.valueOf(key), value, getHashEnd(key));
             }
         });
 
@@ -203,11 +212,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
     @Override
     public void createAuction(CreateAuctionRequest createAuctionRequest,
-            StreamObserver<CreateAuctionResponse> responseObserver) {
+                              StreamObserver<CreateAuctionResponse> responseObserver) {
         AtomicReference<SaveAuctionResponse> response = new AtomicReference<>();
         String id = createAuctionRequest.getAuction().getId();
 
-        if (isNull(id)) {
+        if (StringUtils.isBlank(id)) {
             id = generateSha1Hash(createAuctionRequest.getAuction().toString());
         }
 
@@ -257,15 +266,15 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     private void saveBidIfServerHasId(SendBidRequest sendBidRequest, AtomicReference<SaveBidResponse> response,
-            String auctionId, Integer key, String init, String end) {
+                                      String auctionId, Integer key, String init, String end) {
         if (auctionId.compareTo(init) >= 0 && auctionId.compareTo(end) <= 0) {
             response.set(publishSaveBidMessage(sendBidRequest, key));
         }
     }
 
     private void saveAuctionIfServerHasId(CreateAuctionRequest createAuctionRequest,
-            AtomicReference<SaveAuctionResponse> response,
-            String auctionId, Integer hashIndex, String init, String end) {
+                                          AtomicReference<SaveAuctionResponse> response,
+                                          String auctionId, Integer hashIndex, String init, String end) {
         if (auctionId.compareTo(init) >= 0 && auctionId.compareTo(end) <= 0) {
             response.set(publishSaveAuctionMessage(createAuctionRequest, hashIndex, auctionId));
         }
@@ -278,7 +287,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     public SaveBidResponse publishSaveBidMessage(SendBidRequest sendBidRequest,
-            Integer hashIndex) {
+                                                 Integer hashIndex) {
         ObjectMapper om = new ObjectMapper();
         GrpcRequestAndResponseMapper grpcRequestAndResponseMapper = new GrpcRequestAndResponseMapper();
         SaveBidResponse response;
@@ -302,7 +311,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
     }
 
     public SaveAuctionResponse publishSaveAuctionMessage(CreateAuctionRequest createAuctionRequest,
-            Integer hashIndex, String auctionId) {
+                                                         Integer hashIndex, String auctionId) {
         ObjectMapper om = new ObjectMapper();
         GrpcRequestAndResponseMapper grpcRequestAndResponseMapper = new GrpcRequestAndResponseMapper();
         SaveAuctionResponse response;
@@ -337,8 +346,9 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //        return response;
 //    }
 
-    private SaveAuctionRequest buildSaveAuctionRequest(CreateAuctionRequest createAuctionRequest, Integer hashTableId,
-            String auctionId) {
+    private SaveAuctionRequest buildSaveAuctionRequest(CreateAuctionRequest createAuctionRequest, Integer
+            hashTableId,
+                                                       String auctionId) {
         return SaveAuctionRequest.newBuilder()
                 .setAuction(buildAuctionWithId(createAuctionRequest.getAuction(), auctionId))
                 .setAuctionId(auctionId)
@@ -608,34 +618,34 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //            }
 //        });
 
-        auctionService.createAuction(CreateAuctionRequest.newBuilder()
-                .setAuction(Auction.newBuilder()
-                        .setId("e")
-                        .setOwner("me")
-                        .setProduct("arroz")
-                        .setInitialValue(1.0)
-                        .setCurrentBidInfo(CurrentBidInfo.newBuilder()
-                                .setValue(1.0)
-                                .setUsername("")
-                                .build())
-                        .setFinishTime(now().plusDays(5).toString())
-                        .build())
-                .build(), new StreamObserver<CreateAuctionResponse>() {
-            @Override
-            public void onNext(CreateAuctionResponse createAuctionResponse) {
-
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-
-            }
-
-            @Override
-            public void onCompleted() {
-
-            }
-        });
+//        auctionService.createAuction(CreateAuctionRequest.newBuilder()
+//                .setAuction(Auction.newBuilder()
+//                        .setId("e")
+//                        .setOwner("me")
+//                        .setProduct("arroz")
+//                        .setInitialValue(1.0)
+//                        .setCurrentBidInfo(CurrentBidInfo.newBuilder()
+//                                .setValue(1.0)
+//                                .setUsername("")
+//                                .build())
+//                        .setFinishTime(now().plusDays(5).toString())
+//                        .build())
+//                .build(), new StreamObserver<CreateAuctionResponse>() {
+//            @Override
+//            public void onNext(CreateAuctionResponse createAuctionResponse) {
+//
+//            }
+//
+//            @Override
+//            public void onError(Throwable throwable) {
+//
+//            }
+//
+//            @Override
+//            public void onCompleted() {
+//
+//            }
+//        });
 
 //        auctionService.sendBid(SendBidRequest.newBuilder()
 //                .setId("3")
@@ -711,22 +721,63 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //                    }
 //                });
 //
-//        auctionService.getAuctions(GetAuctionsRequest.newBuilder().build(), new StreamObserver<GetAuctionsResponse>() {
-//            @Override
-//            public void onNext(GetAuctionsResponse getAuctionsResponse) {
-//
-//            }
-//
-//            @Override
-//            public void onError(Throwable throwable) {
-//
-//            }
-//
-//            @Override
-//            public void onCompleted() {
-//
-//            }
-//        });
+        auctionService.getAuctions(GetAuctionsRequest.newBuilder().build(), new StreamObserver<GetAuctionsResponse>() {
+            @Override
+            public void onNext(GetAuctionsResponse getAuctionsResponse) {
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        });
 
     }
+
+    class RetryableAbstraction {
+        private ManagedChannel channel;
+        private AuctionServiceBlockingStub stub;
+        private String key;
+
+        public ManagedChannel getChannel() {
+            return channel;
+        }
+
+        public void setChannel(ManagedChannel channel) {
+            this.channel = channel;
+        }
+
+        public AuctionServiceBlockingStub getStub() {
+            return stub;
+        }
+
+        public void setStub(AuctionServiceBlockingStub stub) {
+            this.stub = stub;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public RetryableAbstraction(String key) {
+            this.key = key;
+        }
+
+        private void retryable() {
+            Integer getNodeRandomPort = getRandomPort(getServerPortsFromNode(parseInt(key)));
+            this.setChannel(buildChannel(SERVER_HOST, getNodeRandomPort));
+            this.setStub(buildAuctionServerStub(channel));
+        }
+    }
 }
+

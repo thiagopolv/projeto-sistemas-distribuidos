@@ -186,6 +186,7 @@ public class AuctionConsumer {
                 default:
                     break;
             }
+            channel.shutdown();
         }
 
         private SaveAuctionRequest buildSaveAuctionRequestWithSufix(SaveAuctionRequest request) {

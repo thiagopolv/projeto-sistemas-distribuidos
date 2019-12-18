@@ -21,7 +21,7 @@ class ClientService {
     private ClientConnectionProperties connectionProperties;
 
     private static final String SEPARATOR2 =
-            "_______________________________________________________________________________\n\n\n";
+            "_______________________________________________________________________________\n";
     private static final String SEND_BID_SUCCESS_MESSAGE = "Your bid was sent successfully.\n\n";
     private static final String SEND_BID_FAIL_MESSAGE = "There was an error sending your bid. Please, refresh " +
             "the auction list and try again.\n\n";
@@ -93,7 +93,8 @@ class ClientService {
             System.out.println(INVALID_BID + String.format("%.2f", currentBid));
             System.out.println(SEPARATOR2);
         } else {
-            SendBidResponse sendBidResponse = connectionProperties.getStub().sendBid(buildSendBidRequest(id, bid, username));
+            retryable();
+            SendBidResponse sendBidResponse = sendBid(id, bid, username);
             System.out.println(sendBidResponse.getSuccess() ? SEND_BID_SUCCESS_MESSAGE : SEND_BID_FAIL_MESSAGE);
             System.out.println(SEPARATOR2);
         }
@@ -112,6 +113,10 @@ class ClientService {
         return null;
     }
 
+    private List<Auction> getAuctionsList() {
+        return getAuctions().getAuctionsList();
+    }
+
     private GetAuctionsResponse getAuctions() {
         GetAuctionsResponse response = null;
         try {
@@ -119,12 +124,23 @@ class ClientService {
         } catch (StatusRuntimeException e) {
             retryable();
             this.getAuctions();
+        } finally {
+            connectionProperties.getChannel().shutdown();
         }
         return response;
     }
 
-    private List<Auction> getAuctionsList() {
-        return getAuctions().getAuctionsList();
+    private SendBidResponse sendBid(String id, Double bid, String username) {
+        SendBidResponse response = null;
+        try {
+            response = connectionProperties.getStub().sendBid(buildSendBidRequest(id, bid, username));
+        } catch (StatusRuntimeException e) {
+            retryable();
+            this.getAuctions();
+        } finally {
+            connectionProperties.getChannel().shutdown();
+        }
+        return response;
     }
 
     private GetAuctionsRequest buildGetAuctionsRequest() {
@@ -168,6 +184,8 @@ class ClientService {
         } catch (StatusRuntimeException e) {
             retryable();
             this.getCreateAuction(createAuctionRequest);
+        } finally {
+            connectionProperties.getChannel().shutdown();
         }
         return response;
     }
