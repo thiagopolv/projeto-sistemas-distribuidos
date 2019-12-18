@@ -1,0 +1,10 @@
+{
+  "numberOfNodes": 3,
+  "basePort": 20000,
+  "portDifference": 500,
+  "numberOfReplicas": 3,
+  "hashTable": { "0": "0", "1": "5555", "2": "aaaa" },
+  "currentNode": 0,
+  "currentServer": 0,
+  "currentServerPort": 20000
+}

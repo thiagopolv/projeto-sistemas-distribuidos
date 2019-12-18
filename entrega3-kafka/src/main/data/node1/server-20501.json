@@ -1,12 +1,1 @@
-[ {
-  "id" : "6653775cc7f9018460faf940e8383de2f31f8d82",
-  "owner" : "RPOLNX",
-  "product" : "bat",
-  "initialValue" : 12.0,
-  "currentBidInfo" : {
-    "value" : 12.0,
-    "username" : ""
-  },
-  "finishTime" : "2019-12-23T16:12:06.726776500",
-  "status" : null
-} ]
+[]

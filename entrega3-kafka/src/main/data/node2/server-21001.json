@@ -1,1 +1,12 @@
-[]
+[ {
+  "id" : "b4d731802219393ee9285aa2e8011b5dee760438",
+  "owner" : "RPOLNX",
+  "product" : "lkj",
+  "initialValue" : 2.0,
+  "currentBidInfo" : {
+    "value" : 98.0,
+    "username" : "thiago"
+  },
+  "finishTime" : "2019-12-23T20:20:57.821841500",
+  "status" : null
+} ]
