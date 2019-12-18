@@ -36,7 +36,7 @@ public class AuctionConsumer {
     private static final Integer AUCTIONS_BASE_PORT = getServerPort();
     private static final String AUCTIONS_HOST = getServerHost();
 
-//    private static final String TOPIC_NAME = "auctions-topic-%d";
+//    private static final String TOPIC_NAME = "auction-topic-%d";
 
     private final String bootstrapServer;
     private final String groupId;
@@ -148,10 +148,11 @@ public class AuctionConsumer {
                 } while (true);
             } catch (WakeupException | IOException e) {
                 System.out.println("Received shutdown signal!");
-            } finally {
-                consumer.close();
-                latch.countDown();
             }
+//            finally {
+//                consumer.close();
+//                latch.countDown();
+//            }
         }
 
         public void shutdown() {
@@ -161,7 +162,7 @@ public class AuctionConsumer {
         private void callService(AuctionServiceImpl service, LogFunction function, String value,
                                  ObjectMapper objectMapper) throws IOException {
             GrpcRequestAndResponseMapper grpcRequestAndResponseMapper = new GrpcRequestAndResponseMapper();
-            ManagedChannel channel = service.buildChannel(AUCTIONS_HOST, AUCTIONS_BASE_PORT + serverSufix);
+            ManagedChannel channel = service.buildChannel(AUCTIONS_HOST, serverConfig.getCurrentServerPort());
             AuctionServiceBlockingStub stub = service.buildAuctionServerStub(channel);
             System.out.println(serverSufix + "- Executing - Key: " + function + ", Value: " + value);
             switch (function) {
@@ -212,7 +213,7 @@ public class AuctionConsumer {
         Integer serverSufix = 0;
         String server = "localhost:9092";
 //        String groupId = "some_application1";
-        String topic = "auctions-topic-%s";
+        String topic = "auction-topic-%s";
 
 //        new Consumer(server, groupId, topic).run();
         AuctionConsumer auctionConsumer = new AuctionConsumer(server, UUID.randomUUID().toString(),

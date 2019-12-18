@@ -1,1 +1,12 @@
-[ ]
+[ {
+  "id" : "acce",
+  "owner" : "me",
+  "product" : "arroz",
+  "initialValue" : 1.0,
+  "currentBidInfo" : {
+    "value" : 5.0,
+    "username" : "eu"
+  },
+  "finishTime" : "2019-12-22T22:27:29.931",
+  "status" : null
+} ]
