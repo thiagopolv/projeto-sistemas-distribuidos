@@ -82,7 +82,7 @@ public class AuctionConsumer {
     }
 
     public void run() {
-        System.out.println("Creating consumer thread");
+        System.out.println("Creating consumer thread for topic " + topic);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -120,25 +120,24 @@ public class AuctionConsumer {
 
     private class ConsumerRunnable implements Runnable {
 
-        private CountDownLatch mLatch;
-        private KafkaConsumer<String, String> mConsumer;
+        private CountDownLatch latch;
+        private KafkaConsumer<String, String> consumer;
 
 
-        public ConsumerRunnable(String bootstrapServer, String groupId, String topic, CountDownLatch mLatch) {
-            this.mLatch = mLatch;
+        public ConsumerRunnable(String bootstrapServer, String groupId, String topic, CountDownLatch latch) {
+            this.latch = latch;
             Properties prop = consumerProps(bootstrapServer, groupId);
-            mConsumer = new KafkaConsumer<>(prop);
-            mConsumer.subscribe(singletonList(topic));
+            consumer = new KafkaConsumer<>(prop);
+            consumer.subscribe(singletonList(topic));
         }
 
         @Override
         public void run() {
-//            System.out.println("Running ConsumerRunnable");
             AuctionServiceImpl service = new AuctionServiceImpl();
             ObjectMapper om = new ObjectMapper();
             try {
                 do {
-                    ConsumerRecords<String, String> records = mConsumer.poll(Duration.ofMillis(100));
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
 
                     for (ConsumerRecord<String, String> record : records) {
                         System.out.println("Consumed - Key: " + record.key() + ", Value: " + record.value());
@@ -150,13 +149,13 @@ public class AuctionConsumer {
             } catch (WakeupException | IOException e) {
                 System.out.println("Received shutdown signal!");
             } finally {
-                mConsumer.close();
-                mLatch.countDown();
+                consumer.close();
+                latch.countDown();
             }
         }
 
         public void shutdown() {
-            mConsumer.wakeup();
+            consumer.wakeup();
         }
 
         private void callService(AuctionServiceImpl service, LogFunction function, String value,

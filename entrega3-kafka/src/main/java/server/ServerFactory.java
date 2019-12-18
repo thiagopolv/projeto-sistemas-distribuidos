@@ -22,7 +22,7 @@ public class ServerFactory {
     private static final String SERVER_HOST = ConfigProperties.getServerHost();
     private ServerConfig serverConfig;
     private Integer SERVER_PORT;
-    private static final String TOPIC_NAME = "auction-topic-%d";
+    private static final String TOPIC_NAME = "auctions-topic-%d";
     private static final String GROUP_ID_NAME = "auction-group-%d";
     private static final String KAFKA_HOST = getKafkaHost();
 
@@ -37,7 +37,7 @@ public class ServerFactory {
 
 
     public void bootstrap() {
-        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
+//        AuctionServiceBlockingStub stub = buildAuctionServerStub(buildChannel(SERVER_HOST, SERVER_PORT));
         Server server = Optional.ofNullable(buildAndStartAuctionServer(serverConfig))
                 .orElseThrow(NullPointerException::new);
 

@@ -406,7 +406,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 //    }
 
     public void saveAuctions(List<AuctionData> auctionsToSave, ServerConfig serverConfig) {
-        JsonLoader jsonLoader = new JsonLoader("src/main/data/" + format(LOGS_FILE_NAME_PATTERN,
+        JsonLoader jsonLoader = new JsonLoader("src/main/data/" + format(NODE_DIRECTORY_PATTERN,
                 serverConfig.getCurrentNode()));
 
         jsonLoader.saveFile(format(AUCTIONS_FILE_NAME_PATTERN, serverConfig.getCurrentServerPort()), auctionsToSave);
@@ -554,42 +554,14 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
         map.put("0", "0");
         map.put("1", "5555");
         map.put("2", "aaaa");
-        AuctionServiceImpl auctionService = new AuctionServiceImpl(new ServerConfig(0, 20000, 500, 3, map, 0));
+        ServerConfig config = new ServerConfig(0, 20000, 500, 3, map, 0);
+        config.setCurrentServer(0);
+        config.setCurrentServerPort(20000);
+        AuctionServiceImpl auctionService = new AuctionServiceImpl(config);
 
-//        auctionService.saveAuction(SaveAuctionRequest.newBuilder()
-//                .setAuction(Auction.newBuilder()
-//                        .setId("acce")
-//                        .setOwner("me")
-//                        .setProduct("arroz")
-//                        .setInitialValue(1.0)
-//                        .setCurrentBidInfo(CurrentBidInfo.newBuilder()
-//                                .setValue(1.0)
-//                                .setUsername("")
-//                                .build())
-//                        .setFinishTime(now().plusDays(5).toString())
-//                        .build())
-//                .setAuctionId("a")
-//                .setServerSufix(0)
-//                .build(), new StreamObserver<SaveAuctionResponse>() {
-//            @Override
-//            public void onNext(SaveAuctionResponse saveAuctionResponse) {
-//
-//            }
-//
-//            @Override
-//            public void onError(Throwable throwable) {
-//
-//            }
-//
-//            @Override
-//            public void onCompleted() {
-//
-//            }
-//        });
-
-        auctionService.createAuction(CreateAuctionRequest.newBuilder()
+        auctionService.saveAuction(SaveAuctionRequest.newBuilder()
                 .setAuction(Auction.newBuilder()
-                        .setId("e")
+                        .setId("acce")
                         .setOwner("me")
                         .setProduct("arroz")
                         .setInitialValue(1.0)
@@ -599,9 +571,11 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
                                 .build())
                         .setFinishTime(now().plusDays(5).toString())
                         .build())
-                .build(), new StreamObserver<CreateAuctionResponse>() {
+                .setAuctionId("a")
+                .setServerSufix(0)
+                .build(), new StreamObserver<SaveAuctionResponse>() {
             @Override
-            public void onNext(CreateAuctionResponse createAuctionResponse) {
+            public void onNext(SaveAuctionResponse saveAuctionResponse) {
 
             }
 
@@ -615,6 +589,35 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
             }
         });
+
+//        auctionService.createAuction(CreateAuctionRequest.newBuilder()
+//                .setAuction(Auction.newBuilder()
+//                        .setId("e")
+//                        .setOwner("me")
+//                        .setProduct("arroz")
+//                        .setInitialValue(1.0)
+//                        .setCurrentBidInfo(CurrentBidInfo.newBuilder()
+//                                .setValue(1.0)
+//                                .setUsername("")
+//                                .build())
+//                        .setFinishTime(now().plusDays(5).toString())
+//                        .build())
+//                .build(), new StreamObserver<CreateAuctionResponse>() {
+//            @Override
+//            public void onNext(CreateAuctionResponse createAuctionResponse) {
+//
+//            }
+//
+//            @Override
+//            public void onError(Throwable throwable) {
+//
+//            }
+//
+//            @Override
+//            public void onCompleted() {
+//
+//            }
+//        });
 
 //        auctionService.sendBid(SendBidRequest.newBuilder()
 //                .setId("acce")

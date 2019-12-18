@@ -25,7 +25,7 @@ public class AuctionProducer {
     }
 
     public void put(String topic, String key, String value) throws ExecutionException, InterruptedException {
-        System.out.println("Put value: " + value + ", for key: " + key);
+        System.out.println("Put value: " + value + ", for key: " + key + " in topic " + topic);
 
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, value);
         producer.send(record, ((recordMetadata, e) -> {
