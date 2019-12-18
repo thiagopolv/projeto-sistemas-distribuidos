@@ -637,26 +637,26 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
             }
         });
 
-        auctionService.sendBid(SendBidRequest.newBuilder()
-                .setId("acce")
-                .setBid(3.0)
-                .setUsername("eu")
-                .build(), new StreamObserver<SendBidResponse>() {
-            @Override
-            public void onNext(SendBidResponse sendBidResponse) {
-
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-
-            }
-
-            @Override
-            public void onCompleted() {
-
-            }
-        });
+//        auctionService.sendBid(SendBidRequest.newBuilder()
+//                .setId("3")
+//                .setBid(3.0)
+//                .setUsername("eu")
+//                .build(), new StreamObserver<SendBidResponse>() {
+//            @Override
+//            public void onNext(SendBidResponse sendBidResponse) {
+//
+//            }
+//
+//            @Override
+//            public void onError(Throwable throwable) {
+//
+//            }
+//
+//            @Override
+//            public void onCompleted() {
+//
+//            }
+//        });
 //
 //        auctionService.saveBid(SaveBidRequest.newBuilder()
 //                .setHashTableId(1)
