@@ -1,14 +1,19 @@
 package client;
 
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 import server.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 import static java.util.Comparator.comparing;
 import static java.util.Objects.isNull;
-import static util.ConfigProperties.getDaysToExpireAuction;
+import static util.ConfigProperties.*;
 
 class ClientService {
 
@@ -22,10 +27,20 @@ class ClientService {
             "the auction list and try again.\n\n";
     private static final String INVALID_BID = "Your bid is less than the current bid: ";
     private static final Integer DAYS_TO_FINISH_AUCTION = getDaysToExpireAuction();
+    private static final Integer NUMBER_OF_NODES = getNumberOfNodes();
+    private static final Integer NUMBER_OF_REPLICAS = getNumberOfReplicas();
+    private static final Integer NODE_PORT_DIFFERENCE = getNodePortDifference();
+    private static final Integer BASE_PORT = getBasePort();
 
-    ClientService(ClientConnectionProperties connectionProperties, String username) {
-        this.connectionProperties = connectionProperties;
+    ClientService(String username) {
         this.username = username;
+        this.connectionProperties = getConnectionProperties();
+    }
+
+    private ClientConnectionProperties getConnectionProperties() {
+        List<List<Integer>> nodeListPorts = getServerPorts();
+        int node = getRandomNode(nodeListPorts.size());
+        return new ClientConnectionProperties(nodeListPorts.get(node));
     }
 
     void resolveClientAction(ClientAction clientAction) {
@@ -33,6 +48,7 @@ class ClientService {
     }
 
     Void printAuctions() {
+        retryable();
         List<Auction> auctions = getAuctionsList();
         if (auctions.isEmpty()) {
             System.out.println("No auctions detected");
@@ -53,6 +69,7 @@ class ClientService {
     }
 
     Void sendBidAndReturnMessage() {
+        retryable();
         List<Auction> auctions = getAuctionsList();
 
         Scanner sc = new Scanner(System.in);
@@ -96,7 +113,14 @@ class ClientService {
     }
 
     private GetAuctionsResponse getAuctions() {
-        return connectionProperties.getStub().getAuctions(buildGetAuctionsRequest());
+        GetAuctionsResponse response = null;
+        try {
+            response = connectionProperties.getStub().getAuctions(buildGetAuctionsRequest());
+        } catch (StatusRuntimeException e) {
+            retryable();
+            this.getAuctions();
+        }
+        return response;
     }
 
     private List<Auction> getAuctionsList() {
@@ -127,10 +151,25 @@ class ClientService {
     }
 
     Void createAuctionAndSendMessage() {
+        retryable();
+
         CreateAuctionRequest createAuctionRequest = buildCreateAuctionRequestFromUserInput();
-        CreateAuctionResponse response = connectionProperties.getStub().createAuction(createAuctionRequest);
+        CreateAuctionResponse response = getCreateAuction(createAuctionRequest);
+
         sendCreateAuctionMessage(response);
+
         return null;
+    }
+
+    private CreateAuctionResponse getCreateAuction(CreateAuctionRequest createAuctionRequest) {
+        CreateAuctionResponse response = null;
+        try {
+            response = connectionProperties.getStub().createAuction(createAuctionRequest);
+        } catch (StatusRuntimeException e) {
+            retryable();
+            this.getCreateAuction(createAuctionRequest);
+        }
+        return response;
     }
 
     private CreateAuctionRequest buildCreateAuctionRequestFromUserInput() {
@@ -177,5 +216,56 @@ class ClientService {
                 .setUsername("")
                 .setValue(initialValue)
                 .build();
+    }
+
+
+    private Integer getRandomPort(List<Integer> portList) {
+        return portList.get(new Random().nextInt(portList.size()));
+    }
+
+    private Integer getRandomNode(Integer num) {
+        return new Random().nextInt(num);
+    }
+
+
+    private List<List<Integer>> getServerPorts() {
+        List<List<Integer>> serverPorts = new ArrayList<>();
+
+        for (int currentNode = 0; currentNode < NUMBER_OF_NODES; currentNode++) {
+            serverPorts.add(getServerPortsFromNode(currentNode));
+        }
+
+        return serverPorts;
+    }
+
+    private List<Integer> getServerPortsFromNode(int currentNode) {
+        List<Integer> portList = new ArrayList<>();
+        for (int currentServer = 0; currentServer < NUMBER_OF_REPLICAS; currentServer++) {
+            portList.add(getServerPort(currentServer, currentNode));
+        }
+        return portList;
+    }
+
+    private Integer getServerPort(int serverPosition, int currentNode) {
+        return BASE_PORT + getNodeOffset(currentNode) + serverPosition;
+    }
+
+    private Integer getNodeOffset(int currentNode) {
+        return currentNode * NODE_PORT_DIFFERENCE;
+    }
+
+    private ManagedChannel buildChannel(String host, Integer port) {
+        return ManagedChannelBuilder.forAddress(host, port)
+                .usePlaintext()
+                .build();
+    }
+
+    private void retryable() {
+        Integer port = getRandomPort(connectionProperties.getNodePortList());
+        System.out.println("Connecting on port: " + port);
+        ManagedChannel channel = buildChannel(getServerHost(), port);
+        AuctionServiceGrpc.AuctionServiceBlockingStub stub = AuctionServiceGrpc.newBlockingStub(channel);
+        connectionProperties.setChannel(channel);
+        connectionProperties.setStub(stub);
     }
 }

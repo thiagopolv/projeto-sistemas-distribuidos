@@ -11,32 +11,12 @@ import static util.ConfigProperties.*;
 
 public class AuctionClient {
 
-    static final String SEPARATOR =
+    private static final String SEPARATOR =
             "_______________________________________________________________________________";
 
-
     private static final String DISCONNECT_VALUE = ClientAction.DISCONNECT.toString();
-    private static final Integer NUMBER_OF_SERVERS = getNumberOfServers();
-    private static final Integer SERVER_PORT = getServerPort();
 
-    private List<Integer> getServerPorts() {
-        List<Integer> serverPorts = new ArrayList<>();
-
-        for (int i = 0; i < NUMBER_OF_SERVERS; i++) {
-            serverPorts.add(SERVER_PORT + i);
-        }
-
-        return serverPorts;
-    }
-
-
-    private ManagedChannel buildChannel(String host, Integer port) {
-        return ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext()
-                .build();
-    }
-
-    private void chooseAction(ClientConnectionProperties connectionProperties) {
+    private void chooseAction() {
         Scanner scanner = new Scanner(System.in);
         System.out.println("\nCONNECTION " + "\n");
         System.out.println("Username: ");
@@ -56,36 +36,24 @@ public class AuctionClient {
             System.out.println("Action: ");
             action = scanner.nextLine();
             System.out.println(SEPARATOR);
-            executeAction(connectionProperties, action.toUpperCase(), username);
+            executeAction(action.toUpperCase(), username);
 
         } while (!action.toUpperCase().equals(DISCONNECT_VALUE));
     }
 
-    private void executeAction(ClientConnectionProperties connectionProperties, String action, String username) {
+    private void executeAction(String action, String username) {
 
         ClientAction clientAction = Arrays.stream(ClientAction.values())
                 .filter(p -> p.toString().equals(action.toUpperCase()))
                 .findFirst().orElse(ClientAction.INVALID);
 
-        ClientService clientService = new ClientService(connectionProperties, username);
+        ClientService clientService = new ClientService(username);
 
         clientService.resolveClientAction(clientAction);
     }
 
-    private Integer getRandomPort(List<Integer> portList) {
-        return portList.get(new Random().nextInt(portList.size()));
-    }
-
     public static void main(String[] args) {
         AuctionClient client = new AuctionClient();
-        List<Integer> ports = client.getServerPorts();
-        Integer port = client.getRandomPort(ports);
-        System.out.println("Connecting on port: " + port);
-        ManagedChannel channel = client.buildChannel(getServerHost(), port);
-        AuctionServiceBlockingStub stub = AuctionServiceGrpc.newBlockingStub(channel);
-
-        client.chooseAction(new ClientConnectionProperties(stub, port, channel));
-
-        channel.shutdown();
+        client.chooseAction();
     }
 }
