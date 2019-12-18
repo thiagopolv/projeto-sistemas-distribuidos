@@ -1,30 +1,11 @@
 package consumer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import config.ServerConfig;
-import domain.LogFunction;
-import io.grpc.ManagedChannel;
-import mapper.AuctionData;
-import mapper.AuctionMapper;
-import mapper.GrpcRequestAndResponseMapper;
-import mapper.SaveAuctionRequestData;
-import mapper.SaveBidRequestData;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.errors.WakeupException;
-import org.apache.kafka.common.serialization.StringDeserializer;
-
-import producer.AuctionProducer;
-import server.AuctionServiceImpl;
-import server.GetLocalAuctionsRequest;
-import server.GetLocalAuctionsResponse;
-import server.SaveAuctionRequest;
-import server.SaveBidRequest;
+import static java.lang.String.format;
+import static java.util.Collections.singletonList;
+import static server.AuctionServiceGrpc.AuctionServiceBlockingStub;
+import static util.ConfigProperties.getKafkaHost;
+import static util.ConfigProperties.getServerHost;
+import static util.ConfigProperties.getServerPort;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -35,15 +16,32 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
-import static java.lang.Integer.parseInt;
-import static java.lang.String.format;
-import static java.util.Collections.singletonList;
-import static server.AuctionServiceGrpc.AuctionServiceBlockingStub;
-import static util.ConfigProperties.getKafkaHost;
-import static util.ConfigProperties.getServerHost;
-import static util.ConfigProperties.getServerPort;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.errors.WakeupException;
+import org.apache.kafka.common.serialization.StringDeserializer;
 
-public class AuctionConsumer {
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import config.ServerConfig;
+import domain.LogFunction;
+import io.grpc.ManagedChannel;
+import mapper.AuctionData;
+import mapper.AuctionMapper;
+import mapper.GrpcRequestAndResponseMapper;
+import mapper.SaveAuctionRequestData;
+import mapper.SaveBidRequestData;
+import producer.AuctionProducer;
+import server.AuctionServiceImpl;
+import server.GetLocalAuctionsRequest;
+import server.GetLocalAuctionsResponse;
+import server.SaveAuctionRequest;
+import server.SaveBidRequest;
+
+public class SnapshotConsumerAndProducer {
 
     private static final Integer AUCTIONS_BASE_PORT = getServerPort();
     private static final String AUCTIONS_HOST = getServerHost();
@@ -58,14 +56,14 @@ public class AuctionConsumer {
     private final Integer serverSufix;
     private ServerConfig serverConfig;
 
-    public AuctionConsumer(String bootstrapServer, String groupId, String topic, Integer serverSufix) {
+    public SnapshotConsumerAndProducer(String bootstrapServer, String groupId, String topic, Integer serverSufix) {
         this.bootstrapServer = bootstrapServer;
         this.groupId = groupId;
         this.topic = topic;
         this.serverSufix = serverSufix;
     }
 
-    public AuctionConsumer(String bootstrapServer, String groupId, String topic, Integer serverSufix,
+    public SnapshotConsumerAndProducer(String bootstrapServer, String groupId, String topic, Integer serverSufix,
             ServerConfig serverConfig) {
         this.bootstrapServer = bootstrapServer;
         this.groupId = groupId;
@@ -97,7 +95,7 @@ public class AuctionConsumer {
     }
 
     public void run() {
-        System.out.println("Creating consumer thread for topic " + topic);
+        System.out.println("Creating snapshot consumer thread for topic " + topic);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -160,28 +158,29 @@ public class AuctionConsumer {
                         counter++;
                         System.out.println("Consumed - Key: " + record.key() + ", Value: " + record.value());
                         LogFunction function = LogFunction.valueOf(record.key());
-                        callService(service, function, record.value(), om);
 
-//                        AuctionProducer producer = new AuctionProducer(KAFKA_SERVER_HOST);
-//                        producer.put(format(SNAPSHOT_TOPIC_PATTERN, serverConfig.getCurrentNode()),
-//                                function.name(),
-//                                om.writeValueAsString(record.key()));
-//
-//                        if (counter == 5) {
-//                            GetLocalAuctionsResponse response =
-//                                    service.getServerAuctions(serverConfig.getCurrentNode().toString());
-//                            List<AuctionData> auctions =
-//                                    auctionMapper.auctionDataListFromAuctionList(response.getAuctionsList());
-//
-//                            producer.put(format(SNAPSHOT_TOPIC_PATTERN, serverConfig.getCurrentNode()),
-//                                    LogFunction.SNAPSHOT.name(),
-//                                    om.writeValueAsString(auctions));
-//                        }
-//                        producer.close();
+                        AuctionProducer producer = new AuctionProducer(KAFKA_SERVER_HOST);
+
+                        producer.put(format(SNAPSHOT_TOPIC_PATTERN, serverConfig.getCurrentNode()),
+                                function.name(),
+                                om.writeValueAsString(record.key()));
+
+                        if (counter == 5) {
+                            counter = 0;
+                            GetLocalAuctionsResponse response =
+                                    service.getServerAuctions(serverConfig.getCurrentNode().toString());
+                            List<AuctionData> auctions =
+                                    auctionMapper.auctionDataListFromAuctionList(response.getAuctionDatabase().getAuctionsList());
+
+                            producer.put(format(SNAPSHOT_TOPIC_PATTERN, serverConfig.getCurrentNode()),
+                                    LogFunction.SNAPSHOT.name(),
+                                    om.writeValueAsString(auctions));
+                        }
+                        producer.close();
                     }
 
                 } while (true);
-            } catch (WakeupException | IOException e) {
+            } catch (WakeupException | IOException | ExecutionException | InterruptedException e) {
                 System.out.println("Received shutdown signal!");
             }
 //            finally {
@@ -256,7 +255,8 @@ public class AuctionConsumer {
         String topic = "auction-topic-%s";
 
 //        new Consumer(server, groupId, topic).run();
-        AuctionConsumer auctionConsumer = new AuctionConsumer(server, UUID.randomUUID().toString(),
+        SnapshotConsumerAndProducer auctionConsumer = new SnapshotConsumerAndProducer(server,
+                UUID.randomUUID().toString(),
                 format(topic, args[0]), Integer.valueOf(args[1]));
         auctionConsumer.run();
         System.out.println(auctionConsumer);

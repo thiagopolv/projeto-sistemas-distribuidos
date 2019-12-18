@@ -48,9 +48,10 @@ public class AuctionMapper {
         return auctionData;
     }
 
-    private mapper.CurrentBidInfo buildCurrentBidInfo(Auction auction) {
-        return new mapper.CurrentBidInfo(auction.getCurrentBidInfo().getValue(),
-                auction.getCurrentBidInfo().getUsername());
+    public List<AuctionData> auctionDataListFromAuctionList(List<Auction> auctions) {
+        return auctions.stream()
+                .map(this::auctionDataFromAuction)
+                .collect(Collectors.toList());
     }
 
     public List<Auction> auctionListFromAuctionDataList(List<AuctionData> auctionDataList) {
@@ -58,6 +59,11 @@ public class AuctionMapper {
                 .map(this::auctionFromAuctionData)
                 .filter(this::auctionStatusIsGoingOn)
                 .collect(Collectors.toList());
+    }
+
+    private mapper.CurrentBidInfo buildCurrentBidInfo(Auction auction) {
+        return new mapper.CurrentBidInfo(auction.getCurrentBidInfo().getValue(),
+                auction.getCurrentBidInfo().getUsername());
     }
 
     private boolean auctionStatusIsGoingOn(Auction auction) {

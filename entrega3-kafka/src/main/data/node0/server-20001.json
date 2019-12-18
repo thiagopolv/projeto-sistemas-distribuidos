@@ -1,1 +1,15 @@
-[ ]
+{
+  "auctions" : [ {
+    "id" : "1",
+    "owner" : "me",
+    "product" : "arroz",
+    "initialValue" : 1.0,
+    "currentBidInfo" : {
+      "value" : 10.0,
+      "username" : "eu"
+    },
+    "finishTime" : "2019-12-23T08:46:42.254",
+    "status" : null
+  } ],
+  "lastUpdate" : "2019-12-18T08:46:44.226"
+}

@@ -87,7 +87,12 @@ message GetLocalAuctionsRequest {
 }
 
 message GetLocalAuctionsResponse {
+    AuctionDatabase auctionDatabase = 1;
+}
+
+message AuctionDatabase {
     repeated Auction auctions = 1;
+    string lastUpdate = 2;
 }
 
 service AuctionService {
