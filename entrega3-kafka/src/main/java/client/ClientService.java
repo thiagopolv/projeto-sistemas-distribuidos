@@ -268,4 +268,5 @@ class ClientService {
         connectionProperties.setChannel(channel);
         connectionProperties.setStub(stub);
     }
+
 }

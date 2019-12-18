@@ -1,5 +1,6 @@
 package consumer;
 
+import static io.grpc.ManagedChannelBuilder.forAddress;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static server.AuctionServiceGrpc.AuctionServiceBlockingStub;
@@ -9,9 +10,13 @@ import static util.ConfigProperties.getServerPort;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -42,6 +47,8 @@ import server.SaveAuctionRequest;
 import server.SaveBidRequest;
 
 public class SnapshotConsumerAndProducer {
+
+    private static final String SERVER_HOST = getServerHost();
 
     private static final Integer AUCTIONS_BASE_PORT = getServerPort();
     private static final String AUCTIONS_HOST = getServerHost();
@@ -146,7 +153,7 @@ public class SnapshotConsumerAndProducer {
 
         @Override
         public void run() {
-            AuctionServiceImpl service = new AuctionServiceImpl();
+            AuctionServiceImpl service = new AuctionServiceImpl(serverConfig);
             AuctionMapper auctionMapper = new AuctionMapper();
             ObjectMapper om = new ObjectMapper();
             Integer counter = 0;
@@ -167,14 +174,16 @@ public class SnapshotConsumerAndProducer {
 
                         if (counter == 5) {
                             counter = 0;
-                            GetLocalAuctionsResponse response =
-                                    service.getServerAuctions(serverConfig.getCurrentNode().toString());
-                            List<AuctionData> auctions =
-                                    auctionMapper.auctionDataListFromAuctionList(response.getAuctionDatabase().getAuctionsList());
+                            List<AuctionData> auctionsList = new ArrayList<>();
+                            for (int i = 0; i < serverConfig.getNumberOfNodes(); i++) {
+                                GetLocalAuctionsResponse response = getServerAuctions(serverConfig.getCurrentNode(),
+                                        service, i);
+                                auctionsList.addAll(auctionMapper.auctionDataListFromAuctionList(
+                                        response.getAuctionDatabase().getAuctionsList()));
+                            }
 
                             producer.put(format(SNAPSHOT_TOPIC_PATTERN, serverConfig.getCurrentNode()),
-                                    LogFunction.SNAPSHOT.name(),
-                                    om.writeValueAsString(auctions));
+                                    LogFunction.SNAPSHOT.name(), om.writeValueAsString(auctionsList));
                         }
                         producer.close();
                     }
@@ -187,6 +196,27 @@ public class SnapshotConsumerAndProducer {
 //                consumer.close();
 //                latch.countDown();
 //            }
+        }
+
+        public GetLocalAuctionsResponse getServerAuctions(Integer key, AuctionServiceImpl auctionService,
+                Integer iterator) {
+            ManagedChannel channel = auctionService.buildChannel(SERVER_HOST, getServerPort(iterator));
+            AuctionServiceBlockingStub stub = auctionService.buildAuctionServerStub(channel);
+            GetLocalAuctionsResponse response = stub.getLocalAuctions(buildGetLocalAuctionsRequest(key));
+            channel.shutdown();
+
+            return response;
+        }
+
+        private Integer getServerPort(Integer iterator) {
+            return serverConfig.getBasePort() + iterator * serverConfig.getPortDifference() + new Random().nextInt(
+                    serverConfig.getNumberOfNodes());
+        }
+
+        private ManagedChannel buildChannel(@SuppressWarnings("SameParameterValue") String host, Integer port) {
+            return forAddress(host, port)
+                    .usePlaintext()
+                    .build();
         }
 
         private GetLocalAuctionsRequest buildGetLocalAuctionsRequest(Integer key) {
@@ -254,10 +284,18 @@ public class SnapshotConsumerAndProducer {
 //        String groupId = "some_application1";
         String topic = "auction-topic-%s";
 
+        Map<String, String> map = new HashMap<>();
+        map.put("0", "0");
+        map.put("1", "5555");
+        map.put("2", "aaaa");
+        ServerConfig config = new ServerConfig(0, 20000, 500, 3, map, 2);
+        config.setCurrentServer(0);
+        config.setCurrentServerPort(20000);
+
 //        new Consumer(server, groupId, topic).run();
         SnapshotConsumerAndProducer auctionConsumer = new SnapshotConsumerAndProducer(server,
                 UUID.randomUUID().toString(),
-                format(topic, args[0]), Integer.valueOf(args[1]));
+                format(topic, args[0]), Integer.valueOf(args[1]), config);
         auctionConsumer.run();
         System.out.println(auctionConsumer);
     }
