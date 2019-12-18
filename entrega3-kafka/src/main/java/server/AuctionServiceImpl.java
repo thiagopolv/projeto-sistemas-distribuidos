@@ -775,6 +775,7 @@ public class AuctionServiceImpl extends AuctionServiceImplBase {
 
         private void retryable() {
             Integer getNodeRandomPort = getRandomPort(getServerPortsFromNode(parseInt(key)));
+            System.out.println("Get auctions from port: " + getNodeRandomPort);
             this.setChannel(buildChannel(SERVER_HOST, getNodeRandomPort));
             this.setStub(buildAuctionServerStub(channel));
         }

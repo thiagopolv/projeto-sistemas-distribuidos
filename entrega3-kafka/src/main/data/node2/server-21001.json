@@ -1,12 +1,1 @@
-[ {
-  "id" : "f5542ad4a5150d84814982055f10aedfffacb63c",
-  "owner" : "rpolnx",
-  "product" : "guitar",
-  "initialValue" : 6000.0,
-  "currentBidInfo" : {
-    "value" : 6001.0,
-    "username" : "rpolnx"
-  },
-  "finishTime" : "2019-12-23T15:18:32.632535500",
-  "status" : null
-} ]
+[]
