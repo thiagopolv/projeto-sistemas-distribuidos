@@ -3,15 +3,21 @@ package client;
 import io.grpc.ManagedChannel;
 import server.AuctionServiceGrpc;
 
+import java.util.List;
+
 public class ClientConnectionProperties {
     private AuctionServiceGrpc.AuctionServiceBlockingStub stub;
-    private Integer port;
+    private List<Integer> nodePortList;
     private ManagedChannel channel;
 
-    ClientConnectionProperties(AuctionServiceGrpc.AuctionServiceBlockingStub stub, Integer port, ManagedChannel channel) {
+    ClientConnectionProperties(AuctionServiceGrpc.AuctionServiceBlockingStub stub, List<Integer> nodePortList, ManagedChannel channel) {
         this.stub = stub;
-        this.port = port;
+        this.nodePortList = nodePortList;
         this.channel = channel;
+    }
+
+    public ClientConnectionProperties(List<Integer> nodePortList) {
+        this.nodePortList = nodePortList;
     }
 
     public AuctionServiceGrpc.AuctionServiceBlockingStub getStub() {
@@ -22,12 +28,12 @@ public class ClientConnectionProperties {
         this.stub = stub;
     }
 
-    public Integer getPort() {
-        return port;
+    public List<Integer> getNodePortList() {
+        return nodePortList;
     }
 
-    public void setPort(Integer port) {
-        this.port = port;
+    public void setNodePortList(List<Integer> nodePortList) {
+        this.nodePortList = nodePortList;
     }
 
     public ManagedChannel getChannel() {
